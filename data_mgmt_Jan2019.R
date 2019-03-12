@@ -1,0 +1,395 @@
+
+require(dplyr)
+require(car)
+require(aspace)
+require(vegan)
+
+plot<-read.csv("CVS_plots.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+stem<-read.csv("CVS_stems.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+soil<-read.csv("CVS_soils_avg.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+nvc <- read.csv("CVS_comm_classification.csv",stringsAsFactors = FALSE, na.strings=c("","NA"))
+VA <- read.csv("VA_CVS_plots_to_use.csv",stringsAsFactors = FALSE, na.strings=c("","NA"))
+
+# manage NVC codes (National Vegetation Classification)
+nvc_names <- nvc %>% select(DivisionCode, AssocElcode, AssocSci.name, AssocCom.name)
+
+# select only veg types that are forests or woodlands
+nvc_use <- nvc_names[substring(nvc_names$DivisionCode, 1, 1)=="1",]
+
+# remove NAs and duplicated rows
+nvc_use <- nvc_use %>% filter(!is.na(AssocElcode))
+nvc_use <- nvc_use %>% filter(!is.na(AssocSci.name))
+nvc_use <- nvc_use %>% filter(!is.na(AssocCom.name))
+nvc_use <- nvc_use[!duplicated(nvc_use),]           # 364 obs
+
+# most CEGL codes follow standard 10-digit format. There are some cells with no CEGLs, one
+# with an obscure CEGL format (typo?) and a dozen or so with "CEGL.NoneExists"
+# CEGL codes in nvc_use dataframe should be same format as those in comm dataframe
+
+# manage plot data
+# fix levels of state
+plot$state <- recode(plot$state, "'Alabama'='AL'; 'Arkansas'='AR'; 'NORTH CAROLINA'='NC';
+'North Carolina'='NC'; 'SOUTH CAROLINA'='SC'; 'South Carolina'='SC'; 'FLORIDA'='FL';
+'Florida'='FL'; 'GEORGIA'='GA'; 'Georgia'='GA'; 'Maryland'='MD'; 'Mississippi'='MS';
+'TENNESSEE'='TN'; 'Tennessee'='TN'; 'TEXAS'='TX'; 'Texas'='TX'; 'Virginia'='VA';
+'West Virginia'='WV'")
+
+## turn observation start date into year
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+plot$year <- substrRight(plot$Observation_Start_Date, 4)
+plot$year <- as.numeric(plot$year)  # one start date == "####", so will be coerced to NA value
+plot <- plot %>% select(Author_Observation_Code, Observation_Start_Date, province, state, 
+                        countyName, Public_Latitude, Public_Longitude, realUTME, realUTMN, 
+                        realUTMZone, Canopy_Height_in_meters, Coordinate_System, Coordinate_Units, 
+                        Longitude_or_UTM.E, Latitude_or_UTM.N, UTM_Zone, Geocoordinate_Datum, 
+                        Author_Location, Elevation, Elevation_Accuracy, Aspect, Slope, Topographic_Position, 
+                        Method_Narrative, commPrimaryScientific, commPrimaryCode, commPrimaryCommon, 
+                        previousObsCode, year)
+colnames(plot)[1] <- "plot"
+
+
+# there are 2299 rows that do not have CEGL codes. retain for now.
+# remove plots not located within woodlands or forests using nvc_use dataframe
+# retain CEGLs of "NA"
+keep <- nvc_use$AssocElcode
+plot <- plot %>% filter(is.na(commPrimaryCode) | commPrimaryCode %in% keep)
+
+# remove plots in WV (they only measured stems >= 7cm DBH)
+plot <- plot %>% filter(state != "WV")
+
+# remove most of VA plots (those that did not measure woody stems using same 
+# protocol as rest of CVS data - received these plots from Karen Patterson at VA NHP)
+# first, need to fix naming convention
+# plot name conversion (from VA naming system to CVS naming system)
+
+# remove plot duplicates/resamples
+remove <- c("D","R")  # should only be 2 such plots
+fix <- VA[nchar(VA$Plot) == 8,]
+fix <- data.frame(fix[,1, drop = FALSE])
+fix <- data.frame(fix[!substr(fix$Plot, 8, 8) %in% remove, , drop = FALSE])
+
+# combine 7-digit plot codes with 8-digit plot codes
+fix2 <- data.frame(VA[nchar(VA$Plot) == 7, 1, drop = FALSE])
+plot_names <- rbind(fix, fix2)
+
+# convert to CVS naming system
+colnames(plot_names)[1] <- "old_name"
+plot_names$alpha <- substr(plot_names$old_name,1,4)
+plot_names$num <- substr(plot_names$old_name,5,nchar(plot_names$old_name))
+# plot_names$cvs_plot <- paste0(substr(plot_names$cvs_name,1,10),
+#                               substr(plot_names$cvs_name,12,nchar(plot_names$cvs_name)))
+
+plot_names$cvs_plot <- paste0("085-", plot_names$alpha, "-0", plot_names$num)
+
+# Find plots in full dataset that were collected by VA NHP; remove those whose plot names
+# are not within plot_names$cvs_plot
+va_plot <- plot[grepl("085-", plot$plot),]
+plot <- plot[!grepl("085-", plot$plot),]
+va_keep <- va_plot[va_plot$plot %in% plot_names$cvs_plot,]
+plot <- rbind(plot, va_keep)
+
+
+# soil data downloaded from CVS database as plot-averaged, horizon-averaged values
+soil <- soil %>% select(Author_Observation_Code, soilOrganic_avg, soilSand_avg, soilSilt_avg, 
+                        soilClay_avg, soilPH_avg, exchangeCapacity_avg, baseSaturation_avg, 
+                        N_avg, S_avg, P_avg, Ca_ppm_avg, Mg_ppm_avg, K_ppm_avg, Na_ppm_avg, 
+                        B_ppm_avg, Fe_ppm_avg, Mn_ppm_avg, Cu_ppm_avg, Zn_ppm_avg, Al_ppm_avg, 
+                        Density_avg)
+
+colnames(soil) <- c("plot","organic","sand","silt","clay","ph","exchCap","baseSat","N","S","P",
+                  "Ca_ppm","Mg_ppm","K_ppm","Na_ppm","B_ppm",
+                  "Fe_ppm","Mn_ppm","Cu_ppm","Zn_ppm","Al_ppm","density")
+
+
+# clean stem data
+
+# module names are inconsistent
+stem$Mod <- recode(stem$Mod,"'mod 1 '='mod 1';'mod 2 '='mod 2';'mod 3 '='mod 3';
+                     'mod 4 '='mod 4';'mod 8 '='mod 8';'mod 9 '='mod 9'; 'mod r'='mod R'")
+
+# remove rows in Stem that have no plot or module size info
+# (I think these rows might be for individual (large) trees whose canopies are in the plot, 
+# but the base is not.)
+stem <- stem %>% filter(!is.na(ModArea) | !is.na(moduleArea) | !is.na(PlotArea))
+
+# Bob found error in how certain rows were aggregated - remove stems for which the diameter
+# is recorded as 39.37cm
+# Also remove NA diameters (only 16 of these)
+stem <- stem[!is.na(stem$Diameter),]
+stem <- stem[stem$Diameter!=39.37,]
+
+# fix species names; lots of inconsistencies
+colnames(stem)[2] <- "SpeciesName"
+stem$SpeciesName <- recode(stem$SpeciesName,"'ACERRUB'='Acer rubrum'; 'Betula lenta var. lenta'='Betula lenta'; 'CARYCOR'='Carya cordiformis'; 'CARYGLA'='Carya glabra'; 'CARYOVT'='Carya ovata'; 'DIOSVIR'='Diospyros virginiana'; 'FAGUGRA'='Fagus grandifolia'; 'FRAXAME'='Fraxinus americana'; 'Fraxinus [americana + biltmoreana + smallii]'='Fraxinus americana'; 'Hamamelis virginiana var. virginiana'='Hamamelis virginiana'; 'ILEXAMB'='Ilex ambigua'; 'ILEXDEC'='Ilex decidua'; 'Ilex decidua var. decidua'='Ilex decidua'; 'ILEXOPAO'='Ilex opaca'; 'ILEXVER'='Ilex verticillata'; 'Ilex verticillata sp.'='Ilex verticillata'; 'JUNIVIR'='Juniperus virginiana'; 'LIQUSTY'='Liquidambar styraciflua'; 'LIRITUL'='Liriodendron tulipifera'; 'Magnolia virginiana var. virginiana'='Magnolia virginiana'; 'MORURUBR'='Morus rubra'; 'Morus rubra sp.'='Morus rubra'; 'NYSSSYL'='Nyssa sylvatica'; 'OXYDARB'='Oxydendrum arboreum'; 'PINUECH'='Pinus echinata'; 'PINUPAL'='Pinus palustris'; 'PINUTAE'='Pinus taeda'; 'PLATOCC'='Platanus occidentalis'; 'PRUNSER'='Prunus serotina'; 'Prunus serotina var. serotina'='Prunus serotina'; 'QUERFAL'='Quercus falcata'; 'QUERMRL'='Quercus marilandica'; 'QUERNIG'='Quercus nigra'; 'QUERPHE'='Quercus phellos'; 'QUERRUB'='Quercus rubra'; 'Quercus rubra var. rubra'='Quercus rubra'; 'QUERSTE'='Quercus stellata'; 'QUERVEL'='Quercus velutina'; 'SASSALB'='Sassafras albidum'; 'Acer negundo var. negundo'='Acer negundo'; 'Tilia americana var. heterophylla'='Tilia americana'; 'Tilia americana var. americana'='Tilia americana';'Tilia americana var. caroliniana'='Tilia americana';'ULMUALA'='Ulmus alata'; 'ULMURUB'='Ulmus rubra'; 'VACCARBA'='Vaccinium arboreum'; 'VACCCOR'='Vaccinium corymbosum'; 'Vaccinium corymbosum sp. #2'='Vaccinium corymbosum'; 'Liriodendron tulipifera var. tulipifera'='Liriodendron tulipifera'; 'Juniperus virginiana var. virginiana'='Juniperus virginiana'; 'Ilex opaca var. opaca'='Ilex opaca'; 'Fagus grandifolia var. caroliniana'='Fagus grandifolia'; 'Cercis canadensis var. canadensis'='Cercis canadensis'; 'Carpinus caroliniana var. caroliniana'='Carpinus caroliniana'; 'Acer rubrum var. rubrum'='Acer rubrum'; 'Toxicodendron radicans var. radicans'='Toxicodendron radicans'; 'Muscadinia rotundifolia var. rotundifolia'='Muscadinia rotundifolia'")
+
+# table of species with plot count (this is the sampling unit)
+# RAN INTO PROBLEMS because there are plot/mod/sps/size duplicates.
+# EMAILED BOB about issue. Not clear what root of problem is, so will just have to 
+# remove duplicates. (I.e., it's not clear whether they are actual data duplicates, or whether 
+# they should be added together). There are 24,124 such rows.
+stem <- stem[!(duplicated(stem[,1:4]) | duplicated(stem[,1:4], fromLast = TRUE)), ]
+
+# some provinces are left blank, but you can fill them in manually
+counties <- c("Gaston", "Lincoln", "Durham", "Orange", "Wake", "Granville", "Chatham")
+plot$province[plot$countyName %in% counties] <- "Piedmont"
+plot$province[plot$countyName=="Watauga"] <- "Mountains"
+
+prov <- left_join(stem[, c(1,2)], plot[, c(1,3,5)], by=c("Plot" = "plot"))
+
+
+# determine how many plots each species is located within
+plot_count <- stem %>% select(Plot, SpeciesName)
+plot_count <- plot_count[!duplicated(plot_count),]
+plot_count <- plot_count %>% group_by(SpeciesName) %>% summarise(n=n())
+
+# extract species that are found on at least 200 plots
+# (using species-specific modeling approach, trying to model rare species will be problematic)
+c(nrow(plot_count[plot_count$n < 200,]), nrow(plot_count[plot_count$n >= 200,]))
+common <- plot_count[plot_count$n >= 200,]
+
+
+# remove species that aren't shrubs or trees (or that are nonnative)
+# categorize leftover species as shrub, shrub-tree, or tree
+# (categorized based on USDA plants website "growth habit")
+remove <- c('Arundinaria gigantea','Arundinaria tecta', 'Berchemia scandens', 'Bignonia capreolata','Campsis radicans', 'Euonymus americanus', 'Gelsemium sempervirens', 'Ligustrum sinense','Lonicera japonica','Muscadinia rotundifolia','Parthenocissus quinquefolia','Smilax bona-nox [var. bona-nox + var. littoralis]','Smilax glauca','Smilax laurifolia','Smilax rotundifolia','Toxicodendron radicans', 'Vitis aestivalis', 'Vitis vulpina')
+shrubs <- c('Clethra alnifolia','Gaylussacia ursina','Hydrangea arborescens','Ilex glabra','Leucothoe fontanesiana','Lyonia lucida','Rhododendron [carolinianum + minus]','Rhododendron calendulaceum','Vaccinium corymbosum', 'Vaccinium formosum', 'Vaccinium fuscatum', 'Vaccinium stamineum', 'Viburnum rafinesqueanum')
+shrub.trees <- c('Acer pensylvanicum','Acer saccharum','Aesculus flava','Aesculus sylvatica','Alnus serrulata','Amelanchier arborea','Amelanchier laevis','Asimina triloba','Carpinus caroliniana','Celtis laevigata','Cercis canadensis','Chionanthus virginicus','Cyrilla racemiflora','Cornus florida','Fraxinus caroliniana','Hamamelis virginiana','Ilex coriacea','Ilex decidua','Ilex montana','Ilex opaca', 'Ilex verticillata', 'Ilex vomitoria','Kalmia latifolia','Lindera benzoin','Magnolia virginiana','Morella cerifera','Ostrya virginiana','Oxydendrum arboreum','Persea palustris','Prunus serotina', 'Quercus incana', 'Rhododendron catawbiense','Rhododendron maximum','Sassafras albidum','Symplocos tinctoria','Vaccinium arboreum','Viburnum prunifolium')
+trees <- c('Acer floridanum', 'Acer negundo', 'Acer rubrum','Betula alleghaniensis','Betula lenta','Betula nigra','Carya cordiformis','Carya glabra','Carya ovalis','Carya ovata','Carya tomentosa','Castanea dentata','Diospyros virginiana','Fagus grandifolia','Fraxinus americana','Fraxinus pennsylvanica','Halesia tetraptera','Juglans nigra','Juniperus virginiana','Liquidambar styraciflua','Liriodendron tulipifera','Magnolia acuminata','Magnolia fraseri','Morus rubra','Nyssa aquatica','Nyssa biflora','Nyssa sylvatica','Picea rubens','Pinus echinata','Pinus palustris', 'Pinus pungens', 'Pinus rigida','Pinus serotina','Pinus strobus','Pinus taeda','Pinus virginiana','Platanus occidentalis','Quercus alba','Quercus coccinea','Quercus falcata','Quercus laevis', 'Quercus lyrata', 'Quercus laurifolia', 'Quercus marilandica var. marilandica', 'Quercus michauxii','Quercus montana', 'Quercus muehlenbergii', 'Quercus nigra', 'Quercus pagoda', 'Quercus phellos','Quercus rubra','Quercus stellata','Quercus velutina', 'Quercus virginiana', 'Robinia pseudoacacia','Taxodium ascendens','Taxodium distichum','Tilia americana','Tsuga canadensis','Ulmus alata','Ulmus americana','Ulmus rubra')
+
+species <- common %>% filter(!SpeciesName %in% remove)
+species$habit <- ifelse(species$SpeciesName %in% shrubs,"shrub",
+                       ifelse(species$SpeciesName %in% shrub.trees,"shrub-tree",
+                              ifelse(species$SpeciesName %in% trees,"tree","oops")))
+table(species$habit)
+
+# add species habit to stem dataframe; create "other" group for species not being analyzed individually
+stem$species <- ifelse(stem$SpeciesName %in% species$SpeciesName, stem$SpeciesName, "other")
+
+# for certain plots, stems were measured differently than CVS protocol. find those cases and remove them
+cvs_class <- c(0.5,1.75,3.75,7.5,12.5,17.5,22.5,27.5,32.5,37.5)
+cvs <- stem[stem$Diameter>=40 | stem$Diameter %in% cvs_class,]
+
+
+#' summary of "active" dataframes so far: 
+#' cvs - stem counts/measurements; stems IDed to species level (common sps) or as 'other' (rarer sps)
+#' soil - soil measurements; averaged across horizons/plot
+#' plot - plot information, including community classification codes (CEGLs)
+
+# since we're comparing 'sapling' counts to 'adult' basal area, need to define these two size classes.
+# separate species dataframe into sap/tree size classes
+sap <- cvs %>% filter(Diameter<=3.75)
+tree <- cvs %>% filter(Diameter>3.75)
+sap <- sap %>% select(-c(SpeciesName, Diameter))   # can remove Diameter from sap
+colnames(sap)[3] <- "sap_count"
+
+# for trees, calculate basal area: pi * (DBH/2)^2
+tree$BA <- pi*((tree$Diameter)/2)^2
+tree$BA2 <- tree$StemCount * tree$BA
+tree <- tree %>% select(-c(SpeciesName, Diameter, StemCount, BA))
+colnames(tree)[8] <- "tree_BA"
+
+
+## calculate sum of counts/BAs for plots/modules/species with more than one row of counts
+sap <- sap %>% group_by(Plot, Mod, species) %>% summarise(sap_count = sum(sap_count))
+tree <- tree %>% group_by(Plot, Mod, species) %>% summarise(tree_BA = sum(tree_BA))
+
+
+## merge the Small and Large dataframes
+stem <- full_join(sap, tree, by = c("Plot","Mod", "species"))
+stem[is.na(stem)] <- 0			## change NAs to zeros
+
+# "stem" is now the active stem dataframe (not "cvs")
+
+# add module/plot sizes back into dataframe (from "cvs" to "stem")
+plot_size <- cvs %>% select(Plot, Mod, ModArea, subsampling_factor, moduleArea, PlotArea)
+plot_size <- distinct(plot_size)
+
+# futher edits needed based on plot size
+# remove rows where module size is larger than plot size - likely data entry errors
+plot_size <- plot_size %>% mutate(Diff = PlotArea-ModArea, diff = PlotArea-moduleArea)
+plot_size <- plot_size %>% filter(is.na(Diff) | Diff>=0)
+plot_size <- plot_size %>% filter(is.na(diff) | diff>=0)
+plot_size <- plot_size %>% select(-Diff, -diff)
+
+# remove rows where subsampling factor is > 1 (this indicates that stems outside 
+# plot boundaries were surveyed.)
+plot_size <- plot_size %>% filter(subsampling_factor <= 1)
+
+# ModArea is the size of the area surveyed within the module, and moduleArea is the size
+# of the module. If a module was subsampled, ModArea will be smaller than moduleArea. 
+# Rows for which this is not the case should be removed (data entry error?)
+plot_size <- plot_size %>% mutate(same = ifelse(subsampling_factor < 1, "subsamp",
+                                          ifelse(subsampling_factor == 1 & is.na(ModArea), NA,
+                                            ifelse(subsampling_factor == 1 & is.na(moduleArea), NA,
+                                              ifelse(ModArea==moduleArea, "same", "diff")))))
+plot_size <- plot_size %>% filter(is.na(same) | same != "diff")
+
+# might want to remove modules that were subsampled b/c of coding issues later on...
+# kept finding duplicated rows with very large #s/BAs, but not sure why
+plot_size <- plot_size %>% filter(same != "subsamp")
+plot_size <- plot_size %>% select(-same)
+
+# merge plot size info back into stem dataframe
+# all.x=FALSE means that rows with plot size data entry errors won't show up in "stem" df
+stem2 <- merge(stem, plot_size, by=c("Plot","Mod"), all.x=FALSE, all.y=TRUE)
+
+# merge soil with stem data
+dat <- merge(stem2, soil, by.x="Plot", by.y="plot", all.x=TRUE, all.y=FALSE)
+
+# merge dat with plot info
+dat <- merge(dat, plot, by.x="Plot", by.y="plot", all.x=FALSE, all.y=FALSE)
+
+# I THINK THIS CODE FOR ACCOUNTING FOR SUBSAMPLED MODULES IS CAUSING ISSUES...
+# correct basal areas and sapling counts by dividing by subsampling factors
+#dat <- dat %>% mutate(c_sap_count = sap_count/subsampling_factor, 
+#                      c_tree_BA = tree_BA/subsampling_factor)
+#dat <- dat[,c(1:3, 59, 60, 4:58)]  # just easier to see sap, tree counts/BAs
+#dat <- dat %>% select(-ModArea, -subsampling_factor)
+
+# c_sap and c_tree values that are Inf or NA can be removed (likely typo; only 39 of these)
+#dat2 <- dat %>% filter(!is.infinite(c_sap_count), !is.infinite(c_tree_BA), 
+#                        !is.na(c_sap_count), !is.na(c_tree_BA))
+
+# Won't analyze residual plot data, so can remove those
+dat2 <- dat %>% filter(Mod != "mod R")
+
+# remove modules where module size (moduleArea) is <100m2 or "NA"
+# this will make comparison across modules less complicated
+dat2 <- dat2 %>% filter(!is.na(moduleArea) & moduleArea == 100)
+
+# need to remove mods that aren't contiguous
+# also remove plots that don't include the four contiguous 
+# traditional intensive modules (mods 2, 3, 8, 9)
+keep <- c("mod 2", "mod 3", "mod 8", "mod 9")
+dat2 <- dat2 %>% filter(Mod %in% keep)
+
+
+# sampling unit is each combination of Plot/Mod/Species, so we already know:
+# conspecific sapling count within the module; and
+# conspecific adult BA within the module.
+# Need to calculate: 
+# total sapling count within module;
+# total adult BA across plot;
+# total conspecific adult BA across plot
+
+# aggregate total sapling count within each module
+total_sap <- dat2 %>% select(Plot, Mod, sap_count)
+total_sap <- total_sap %>% group_by(Plot, Mod) %>% summarise(tot_mod_sap_count = 
+                                                               sum(sap_count))
+# add back to main df
+dat2 <- left_join(dat2, total_sap, by = c("Plot", "Mod"))
+
+# aggregate tree_BA across all modules within the same plot
+total_BA <- dat2 %>% select(Plot, tree_BA)
+total_BA <- total_BA %>% group_by(Plot) %>% summarise(plot_tree_BA = sum(tree_BA))
+# add back to main df
+dat2 <- left_join(dat2, total_BA, by = "Plot")
+
+# aggregate tree_BA across modules within same plot by species to get
+# conspecific tree BA
+cons_BA <- dat2 %>% select(Plot, species, tree_BA)
+cons_BA <- cons_BA %>% group_by(Plot, species) %>% summarise(plot_cons_tree_BA = 
+                                                                      sum(tree_BA))
+
+# add back to main df
+dat2 <- left_join(dat2, cons_BA, by = c("Plot", "species"))
+
+# calculate proportion of adult BA made up by conspecifics
+prop_cons <- dat2 %>% mutate(prop_cons = plot_cons_tree_BA / plot_tree_BA)
+
+
+# make slope/aspect conversions
+# 3 terms for 2 vars; allows model to fit this independently for each sps
+# slope/aspect need to be transformed to radians first 
+require(aspace)
+
+# convert to radians 
+dat2$slopeR <- as_radians(dat2$Slope)
+dat2$aspectR <- as_radians(dat2$Aspect)
+
+# create new topography variables (pers. comm. with J. Clark)
+dat2$top1 <- sin(dat2$slopeR)
+dat2$top2 <- sin(dat2$slopeR) * sin(dat2$aspectR)
+dat2$top3 <- sin(dat2$slopeR) * cos(dat2$aspectR)
+
+
+# reduce length of species names by giving them four-letter codes
+# first replace Carya ovalis with Carya glabra (synonyms)
+dat3 <- dat2
+dat3$species <- ifelse(dat3$species=="Carya ovalis", "Carya glabra", dat3$species)
+
+species <- as.data.frame(dat3$species)
+names(species) <- "species_name"
+names(dat3)[3] <- "species_name"  # just to make things easier later on
+species$species <- paste0(substr(species$species_name,start=1, stop=2), sub("^\\S+\\s+", '', species$species_name))
+species$species <- substr(species$species, start=1, stop=4)
+species[species == "otot"] <- "other"
+species <- unique(species)
+# add back to main df
+dat4 <- left_join(dat3, species, by="species_name")
+
+# add climate data
+clim <- read.csv("cvs_climate.csv", stringsAsFactors = FALSE)
+va <- read.csv("cvs_va_climate.csv", stringsAsFactors = FALSE)
+clim <- rbind(clim, va)
+clim <- unique(clim)
+dat4 <- merge(dat4, clim, by.x="Plot", by.y="plot", all.x=TRUE, all.y=FALSE)
+
+
+# need to remove plots for which we don't have ALL four contiguous intensive mods
+test <- dat4 %>% select(Plot, Mod) %>% distinct()
+test <- test %>% group_by(Plot) %>% summarise(n = n())
+table(test$n)  # 2242 plots that contain 4 intensive modules (2,3,8,9)
+test <- test %>% filter(n==4)
+keep <- test$Plot   # Plots to keep
+dat5 <- dat4 %>% filter(Plot %in% keep)
+
+
+# running PCA on soil vars to get soil nutrient PCA axis for modeling
+# from column 10 (organic) through column 30 (density)
+require(vegan)
+soil <- dat5 %>% select(organic:density)
+soil <- soil[complete.cases(soil), -22]
+pca <- rda(soil)
+#biplot(pca, display = c("sites", "species"), type = c("text", "points"))
+
+soil$comp1 <- pca$CA$u[,1]
+soil$comp2 <- pca$CA$u[,2]
+dat5$ID <- row.names(dat5)
+soil$ID <- row.names(soil)
+dat5 <- left_join(dat5, soil[,22:24], by = "ID")
+
+write.csv(dat5, "chap3_data_module.csv", row.names = FALSE)
+# this is the final df to use if you want the sampling unit to be each combination of 
+# plot/mod/species, where: 
+# sap_count = # sap stems of particular species within plot/mod
+# tree_BA = BA of all adult stems of a particular species within plot/mod
+# tot_mod_sap_count = total # sap stems across each plot/mod
+# plot_tree_BA = total adult BA across plot
+# plot_cons_tree_BA = adult BA of conspecifics across plot
+
+
+# create another df that combines all modules, so sampling unit becomes every combination
+# of plot/species (suggested by committee in Feb 2019)
+
+# first extract mod-specific info that needs to be summarized on the plot scale, then summarize
+mod_summ <- dat5 %>% select(Plot, species, sap_count, tot_mod_sap_count)
+mod_summ <- mod_summ %>% group_by(Plot, species) %>% summarise(sap_plot_count = sum(sap_count), 
+                                                              tot_plot_sap_count = sum(tot_mod_sap_count))
+
+# merge plot data with full dataframe
+dat6 <- left_join(dat5, mod_summ, by=c("Plot", "species"))
+
+write.csv(dat6, "chap3_data_by_plot.csv", row.names = FALSE)
+
+# this is the final df to use if you want the sampling unit to be each combination of 
+# plot/species, where: 
+# sap_plot_count = # sap stems of particular species across plot
+# tot_plot_sap_count = total # sap stems across plot
+# plot_cons_tree_BA = adult BA of conspecifics across plot
+# plot_tree_BA = total adult BA across plot
+
+
+ 
