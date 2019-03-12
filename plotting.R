@@ -46,6 +46,66 @@ points(dat18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha
 title(main = "CVS plot locations, n = 1943")
 
 
+
+
+
+
+# map soil PCA axes 1 and 2 across plots to look for geographic trends
+# need lat/long, plot, pca1, pca2, where each plot is unique
+ll16 <- as.data.frame(dat16ll@coords)
+ll17 <- as.data.frame(dat17ll@coords)
+ll18 <- as.data.frame(dat18ll@coords)
+ll16$ID <- rownames(ll16)
+ll17$ID <- rownames(ll17)
+ll18$ID <- rownames(ll18)
+ll_all <- rbind(ll16, ll17, ll18)
+ll_all$ID <- as.integer(ll_all$ID)
+plot_pca <- left_join(ll_all, dat[ ,c("ID", "comp1", "comp2")], by="ID")
+names(plot_pca)[4:5] <- c("PCA1", "PCA2")
+
+par(mar = rep(0.5, 4))
+basemap <- map_data(database="state", regions=c("north carolina", "south carolina", 
+                                "florida", "georgia"))
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = realUTME, y = realUTMN, color = PCA1), 
+             alpha = 0.5) + 
+  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+                        high="blue") +
+  labs(fill = "Soil PCA \naxis 1") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = realUTME, y = realUTMN, color = PCA2), 
+             alpha = 0.5) + 
+  scale_color_gradient2(low="red", mid="white",
+                        high="blue") +
+  labs(fill = "Soil PCA \naxis 1") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+
+
+
 # find loblolly and longleaf plots for Bob to look at
 longleaf_bob <- as.data.frame(dat[grep("longleaf", dat$commPrimaryCommon, ignore.case = TRUE), 
                     "commPrimaryCommon"])
@@ -124,12 +184,6 @@ points(plots_remove16ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue
 points(plots_remove17ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 points(plots_remove18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 title(main = "CVS plots to remove, n = 388")
-
-
-
-
-# map after you remove plots
-
 
 
 
