@@ -139,33 +139,53 @@ plot$province[plot$countyName=="Watauga"] <- "Mountains"
 prov <- left_join(stem[, c(1,2)], plot[, c(1,3,5)], by=c("Plot" = "plot"))
 
 
-# determine how many plots each species is located within
-plot_count <- stem %>% select(Plot, SpeciesName)
-plot_count <- plot_count[!duplicated(plot_count),]
-plot_count <- plot_count %>% group_by(SpeciesName) %>% summarise(n=n())
 
-# extract species that are found on at least 200 plots
-# (using species-specific modeling approach, trying to model rare species will be problematic)
-c(nrow(plot_count[plot_count$n < 200,]), nrow(plot_count[plot_count$n >= 200,]))
-common <- plot_count[plot_count$n >= 200,]
+# import USDA plants data to get growth habit info for each species;
+# only analyzing trees/shrubs
+# downloaded from website: https://plants.sc.egov.usda.gov/dl_all.html
+require(tidyr)
+species <- stem %>% distinct(SpeciesName)
+usda <- read.csv("USDA_plants_growth_habit.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+keep <- left_join(species, usda[, c("Scientific.Name", "Growth.Habit", "Native.Status")], 
+                  by = c("SpeciesName" = "Scientific.Name"))
+keep <- keep[!is.na(keep$Growth.Habit), ]
+keep <- keep %>% separate(Growth.Habit, c("gh1", "gh2", "gh3"), sep = ",")
 
+keep$habit <- with(keep, ifelse(
+  gh1 == "Tree", "trees", ifelse(
+      gh1 == "Shrub", "shrubs", "remove"
+    )
+  )
+)
+keep <- keep %>% filter(gh1 ==  "Tree" | gh1 == "Shrub")
 
+# in a separate project, I manually extracted growth habits for certain species via USDA plants website;
+# add these to dataframe.
+
+# (old code)
 # remove species that aren't shrubs or trees (or that are nonnative)
-# categorize leftover species as shrub, shrub-tree, or tree
+# categorize species as shrub, shrub-tree, or tree
 # (categorized based on USDA plants website "growth habit")
 remove <- c('Arundinaria gigantea','Arundinaria tecta', 'Berchemia scandens', 'Bignonia capreolata','Campsis radicans', 'Euonymus americanus', 'Gelsemium sempervirens', 'Ligustrum sinense','Lonicera japonica','Muscadinia rotundifolia','Parthenocissus quinquefolia','Smilax bona-nox [var. bona-nox + var. littoralis]','Smilax glauca','Smilax laurifolia','Smilax rotundifolia','Toxicodendron radicans', 'Vitis aestivalis', 'Vitis vulpina')
 shrubs <- c('Clethra alnifolia','Gaylussacia ursina','Hydrangea arborescens','Ilex glabra','Leucothoe fontanesiana','Lyonia lucida','Rhododendron [carolinianum + minus]','Rhododendron calendulaceum','Vaccinium corymbosum', 'Vaccinium formosum', 'Vaccinium fuscatum', 'Vaccinium stamineum', 'Viburnum rafinesqueanum')
 shrub.trees <- c('Acer pensylvanicum','Acer saccharum','Aesculus flava','Aesculus sylvatica','Alnus serrulata','Amelanchier arborea','Amelanchier laevis','Asimina triloba','Carpinus caroliniana','Celtis laevigata','Cercis canadensis','Chionanthus virginicus','Cyrilla racemiflora','Cornus florida','Fraxinus caroliniana','Hamamelis virginiana','Ilex coriacea','Ilex decidua','Ilex montana','Ilex opaca', 'Ilex verticillata', 'Ilex vomitoria','Kalmia latifolia','Lindera benzoin','Magnolia virginiana','Morella cerifera','Ostrya virginiana','Oxydendrum arboreum','Persea palustris','Prunus serotina', 'Quercus incana', 'Rhododendron catawbiense','Rhododendron maximum','Sassafras albidum','Symplocos tinctoria','Vaccinium arboreum','Viburnum prunifolium')
 trees <- c('Acer floridanum', 'Acer negundo', 'Acer rubrum','Betula alleghaniensis','Betula lenta','Betula nigra','Carya cordiformis','Carya glabra','Carya ovalis','Carya ovata','Carya tomentosa','Castanea dentata','Diospyros virginiana','Fagus grandifolia','Fraxinus americana','Fraxinus pennsylvanica','Halesia tetraptera','Juglans nigra','Juniperus virginiana','Liquidambar styraciflua','Liriodendron tulipifera','Magnolia acuminata','Magnolia fraseri','Morus rubra','Nyssa aquatica','Nyssa biflora','Nyssa sylvatica','Picea rubens','Pinus echinata','Pinus palustris', 'Pinus pungens', 'Pinus rigida','Pinus serotina','Pinus strobus','Pinus taeda','Pinus virginiana','Platanus occidentalis','Quercus alba','Quercus coccinea','Quercus falcata','Quercus laevis', 'Quercus lyrata', 'Quercus laurifolia', 'Quercus marilandica var. marilandica', 'Quercus michauxii','Quercus montana', 'Quercus muehlenbergii', 'Quercus nigra', 'Quercus pagoda', 'Quercus phellos','Quercus rubra','Quercus stellata','Quercus velutina', 'Quercus virginiana', 'Robinia pseudoacacia','Taxodium ascendens','Taxodium distichum','Tilia americana','Tsuga canadensis','Ulmus alata','Ulmus americana','Ulmus rubra')
+keep_stems <- as.data.frame(c(shrubs, shrub.trees, trees))
+names(keep_stems) <- "SpeciesName"
+keep_stems$SpeciesName <- as.character(keep_stems$SpeciesName)
 
-species <- common %>% filter(!SpeciesName %in% remove)
-species$habit <- ifelse(species$SpeciesName %in% shrubs,"shrub",
-                       ifelse(species$SpeciesName %in% shrub.trees,"shrub-tree",
-                              ifelse(species$SpeciesName %in% trees,"tree","oops")))
-table(species$habit)
+# combine new species vector with old species vector and remove duplicates
+all_keep_stems <- c(keep$SpeciesName, keep_stems$SpeciesName)  # 355
+all_keep_stems <- unique(all_keep_stems)  # 297
 
-# add species habit to stem dataframe; create "other" group for species not being analyzed individually
-stem$species <- ifelse(stem$SpeciesName %in% species$SpeciesName, stem$SpeciesName, "other")
+# species in "all_keep_stems" vector will be analyzed as the response (sapling count); 
+# others will be kept to calculate BAs and counts, but won't be analyzed as response;
+# (look through list of species to remove to make sure you aren't dumping important species.
+# the assumption is that they aren't relatively common trees/shrubs if they aren't in 
+# "all_keep_stems", and thus not appropriate for this analysis)
+
+# create "other" group for species not being analyzed individually
+stem$species <- ifelse(stem$SpeciesName %in% all_keep_stems, stem$SpeciesName, "other")
 
 # for certain plots, stems were measured differently than CVS protocol. find those cases and remove them
 cvs_class <- c(0.5,1.75,3.75,7.5,12.5,17.5,22.5,27.5,32.5,37.5)
@@ -181,14 +201,14 @@ cvs <- stem[stem$Diameter>=40 | stem$Diameter %in% cvs_class,]
 # separate species dataframe into sap/tree size classes
 sap <- cvs %>% filter(Diameter<=3.75)
 tree <- cvs %>% filter(Diameter>3.75)
-sap <- sap %>% select(-c(SpeciesName, Diameter))   # can remove Diameter from sap
-colnames(sap)[3] <- "sap_count"
+sap <- sap %>% select(-Diameter)   # can remove Diameter from sap
+colnames(sap)[4] <- "sap_count"
 
 # for trees, calculate basal area: pi * (DBH/2)^2
 tree$BA <- pi*((tree$Diameter)/2)^2
 tree$BA2 <- tree$StemCount * tree$BA
-tree <- tree %>% select(-c(SpeciesName, Diameter, StemCount, BA))
-colnames(tree)[8] <- "tree_BA"
+tree <- tree %>% select(-c(Diameter, StemCount, BA))
+colnames(tree)[9] <- "tree_BA"
 
 
 ## calculate sum of counts/BAs for plots/modules/species with more than one row of counts
@@ -239,6 +259,8 @@ stem2 <- merge(stem, plot_size, by=c("Plot","Mod"), all.x=FALSE, all.y=TRUE)
 dat <- merge(stem2, soil, by.x="Plot", by.y="plot", all.x=TRUE, all.y=FALSE)
 
 # merge dat with plot info
+# not keeping all 'dat' rows b/c before we filtered out plots for various reasons, and 
+# don't want those plots in the dataframe
 dat <- merge(dat, plot, by.x="Plot", by.y="plot", all.x=FALSE, all.y=FALSE)
 
 # I THINK THIS CODE FOR ACCOUNTING FOR SUBSAMPLED MODULES IS CAUSING ISSUES...
@@ -327,6 +349,56 @@ species$species <- paste0(substr(species$species_name,start=1, stop=2), sub("^\\
 species$species <- substr(species$species, start=1, stop=4)
 species[species == "otot"] <- "other"
 species <- unique(species)
+
+#check for identical 4-letter species codes and fix
+species <- species %>% arrange(species)
+species$species_name <- as.character(species$species_name)
+which(duplicated(species$species))
+
+species$species_name <- with(species, ifelse(
+  species_name == "Acer rubrum var. drummondii", "Acer rubrum", ifelse(
+                species_name == "Juniperus virginiana var. silicicola", "Juniperus virginiana", ifelse(
+                  species_name == "Lyonia ligustrina var. foliosiflora", "Lyonia ligustrina", ifelse(
+                    species_name == "Lyonia ligustrina var. ligustrina", "Lyonia ligustrina", ifelse(
+                      species_name == "Quercus marilandica var. marilandica", "Quercus marilandica", 
+                      species_name))))))
+species <- species %>% distinct()
+
+species$species <- with(species, ifelse(
+  species_name == "Carpinus caroliniana", "Cacr", ifelse(
+    species_name == "Frangula caroliniana", "Frang_ca", ifelse(
+      species_name == "Ilex amelanchier", "Ilamel", ifelse(
+        species_name == "Ilex ambigua", "Ilambi", ifelse(
+          species_name == "Ilex coriacea", "Ilcori", ifelse(
+            species_name == "Ilex collina", "Ilcoll", ifelse(
+              species_name == "Ilex cornuta", "Ilcorn", ifelse(
+                species_name == "Quercus ×bushii", "Quxbush", ifelse(
+                  species_name == "Quercus ×blufftonensis", "Quxbluff", ifelse(
+                    species_name == "Quercus ×subintegra", "Quxsub", ifelse(
+                      species_name == "Quercus ×saulii", "Quxsau", ifelse(
+                        species_name == "Quercus laevis", "Qulaev", ifelse(
+                          species_name == "Quercus laurifolia", "Qulaur", ifelse(
+                            species_name == "Quercus marilandica", "Qumari", ifelse(
+                              species_name == "Quercus margaretta", "Qumarg", ifelse(
+                                species_name == "Quercus minima", "Qumini", ifelse(
+                                  species_name == "Quercus michauxii", "Qumich", ifelse(
+                                    species_name == "Rhododendron catawbiense", "Rhcata", ifelse(
+                                      species_name == "Rhododendron calendulaceum", "Rhcale", ifelse(
+                                        species_name == "Rhododendron carolinianum", "Rhcaro", ifelse(
+                                          species_name == "Rhododendron canescens", "Rhcane", ifelse(
+                                            species_name == "Tsuga canadensis", "Tscana", ifelse(
+                                              species_name == "Tsuga caroliniana", "Tscaro",
+                                              species))))))))))))))))))))))))
+
+# also change species names in main df so it matches the species dataframe
+dat3$species_name <- with(dat3, ifelse(
+  species_name == "Acer rubrum var. drummondii", "Acer rubrum", ifelse(
+    species_name == "Juniperus virginiana var. silicicola", "Juniperus virginiana", ifelse(
+      species_name == "Lyonia ligustrina var. foliosiflora", "Lyonia ligustrina", ifelse(
+        species_name == "Lyonia ligustrina var. ligustrina", "Lyonia ligustrina", ifelse(
+          species_name == "Quercus marilandica var. marilandica", "Quercus marilandica", 
+          species_name))))))
+
 # add back to main df
 dat4 <- left_join(dat3, species, by="species_name")
 
@@ -351,7 +423,7 @@ dat5 <- dat4 %>% filter(Plot %in% keep)
 # from column 10 (organic) through column 30 (density)
 require(vegan)
 soil <- dat5 %>% select(organic:density)
-soil <- soil[complete.cases(soil), -22]
+soil <- soil[complete.cases(soil), ]
 pca <- rda(soil)
 #biplot(pca, display = c("sites", "species"), type = c("text", "points"))
 
