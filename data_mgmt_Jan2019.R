@@ -454,7 +454,13 @@ mod_summ <- mod_summ %>% group_by(Plot, species) %>% summarise(sap_plot_count = 
 # merge plot data with full dataframe
 dat6 <- left_join(dat5, mod_summ, by=c("Plot", "species"))
 
-write.csv(dat6, "chap3_data_by_plot.csv", row.names = FALSE)
+# add moisture index info (from Conghe Song)
+# TWI = total wetness index = slope/UAA (upslope accumulated area)
+moisture <- read.csv("twi_data.csv", stringsAsFactors = FALSE)
+moisture <- moisture %>% select(ID, twi)
+get_plot <- left_join(moisture, dat6[, c("Plot", "ID"), ], by = "ID")
+dat7 <- left_join(dat6, get_plot[,c(2, 3)], by = "Plot")
+write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 
 # this is the final df to use if you want the sampling unit to be each combination of 
 # plot/species, where: 
@@ -464,4 +470,123 @@ write.csv(dat6, "chap3_data_by_plot.csv", row.names = FALSE)
 # plot_tree_BA = total adult BA across plot
 
 
+# 27 MARCH UPDATE: YOU UPDATED THE CHAP3_DATA_BY_PLOT DF WITH TWI, BUT HAVE NOT YET
+# RE-RUN THE CULLING CODE BELOW. WAIT UNTIL YOU TALK TO BOB ABOUT THIS APPROACH
+ 
+
+
+# need to cull dataset to remove inappropriate vegetation types from analysis
+# look at veg types in df
+dat <- dat7
+veg <- dat %>% select(Plot, commPrimaryCommon)
+veg <- distinct(veg)
+veg <- veg %>% group_by(commPrimaryCommon) %>% summarise(n = n())
+veg <- veg %>% filter(!is.na(commPrimaryCommon))
+
+# trick is to remove veg types with sufficiently unique recruitment patterns that those plots
+# would mask recruitment pattern of interest
+
+# remove maritime/estuarine fringe/fringe/marsh hammock; highly affected by salt input
+# remove longleaf savannas/barrens/sandhill scrubs; soil moisture/nutrients sufficiently diff't
+# include levee forest/bottomland hardwoods/floodplains, but remove marsh/peatland/bogs/swamps/impoundments; soil sufficiently diff't
+# include alluvial forests/headwater stream forests/nonriverine wet hardwood forests/wet marl?
+# remove pocosins, such as pond pine woodland/bay forest/pocosin/atlantic white cedar forest/canebreaks
+# ??? remove pine savannas/wet pine flatwoods/sandhill seep/cypress savannas
+# remove tidal red cedar forest
+veg_substr <- "Fringe|Maritime|Marsh|Longleaf|Peat|Bog|Swamp|Pocosin|Loblolly|Pond-cypress|Sandhill Scrub|Table Mountain Pine|Hemlock|Successional|Sandhill|Fraser Fir|Hammock|Outcrop|Tidal|Bluff"
+veg_remove <- veg[grep(veg_substr, veg$commPrimaryCommon), ]
+dat_rem <- dat %>% filter(!commPrimaryCommon %in% veg_remove$commPrimaryCommon)
+
+# looks OK, but there are a lot of commPrimaryCommon cells with NA, altho they do have CEGLs
+# there are fewer NAs using commPrimaryScientific
+nas <- dat_rem[is.na(dat_rem$commPrimaryScientific),]  # 1257 rows with veg community type NAs
+nrow(nas[is.na(nas$commPrimaryCode),])   # of those, 1000 rows contain CEGL NAs
+
+# find veg community types for those that DO have CEGLs (257 of these)
+# leave out the 1000 rows that do not have any veg type names/codes?
+nas_table <- as.data.frame(nas[!is.na(nas$commPrimaryCode), "commPrimaryCode"])
+names(nas_table) <- "commPrimaryCode"
+nas_table <- unique(nas_table)   # four CEGLs that you need to add a veg type name for
+# CEGL007126, CEGL007127, CEGL007129, CEGL007125
+
+# manually look up veg types associated with those CEGLs
+# add new veg types back into dat_rem dataframe
+dat_rem$commPrimaryCommon <- ifelse(
+  dat_rem$commPrimaryCode == "CEGL007126", "Longleaf Pine - Pond Pine / Turkey Oak / Blue Huckleberry / Little Bluestem Woodland Association", ifelse(
+    dat_rem$commPrimaryCode == "CEGL007127", "Longleaf Pine / Turkey Oak / Woody-goldenrod / Arrowfeather Three-awn Woodland Association", ifelse(
+      dat_rem$commPrimaryCode == "CEGL007129", "Longleaf Pine / Sand Post Oak / Atlantic Poison-oak / Little Bluestem Woodland Association", ifelse(
+        dat_rem$commPrimaryCode == "CEGL007125", "Longleaf Pine / Turkey Oak - Sand Live Oak / Little Bluestem Woodland Association", 
+        dat_rem$commPrimaryCommon
+      )
+    )
+  )
+)
+
+dat_rem$commPrimaryScientific <- ifelse(
+  dat_rem$commPrimaryCode == "CEGL007126", "Pinus palustris - Pinus serotina / Quercus laevis / Gaylussacia frondosa / Schizachyrium scoparium Woodland Association", ifelse(
+    dat_rem$commPrimaryCode == "CEGL007127", "Pinus palustris / Quercus laevis / Chrysoma pauciflosculosa / Aristida purpurascens Woodland Association", ifelse(
+      dat_rem$commPrimaryCode == "CEGL007129", "Pinus palustris / Quercus margarettiae / Toxicodendron pubescens / Schizachyrium scoparium Woodland Association", ifelse(
+        dat_rem$commPrimaryCode == "CEGL007125", "Pinus palustris / Quercus laevis - Quercus geminata / Schizachyrium scoparium Woodland Association", 
+        dat_rem$commPrimaryScientific
+      )
+    )
+  )
+)
+
+# there are 1000 NAs for veg type - scientific names, and 7723 for veg type - common names
+# so start culling data using scientific names now
+# remove "Ruderal" and "Sabal palmetto" plots
+remove2 <- dat_rem[grep("Ruderal|Sabal palmetto ", dat_rem$commPrimaryScientific), ]
+dat_rem <- dat_rem[!dat_rem$ID %in% remove2$ID, ]
+
+# this second culling iteration leaves you with all the plots you decided to keep before, 
+# plus those plots you added in manually using CEGL codes
+veg2 <- dat_rem %>% select(Plot, commPrimaryScientific)
+veg2 <- distinct(veg2)
+veg2 <- veg2 %>% group_by(commPrimaryScientific) %>% summarise(n = n())
+veg2 <- veg2 %>% filter(!is.na(commPrimaryScientific))  # there are 73 NA rows
+
+# extreme environments/ruderal plots have already been removed, so now you just want 
+# to separate mixed hardwood from pine plots
+pine_substr <- "Pinus palustris, Pinus|Pinus palustris / |Picea rubens - |Picea rubens - |Pinus echinata - |Pinus echinata / Schizachyrium| / Juniperus virginiana|Pinus elliottii var. elliottii |Pinus serotina|Pinus strobus|Pinus taeda - Chamaecyparis|Pinus taeda - Quercus|Pinus virginiana |Taxodium distichum - |Tsuga canadensis -|Juniperus virginiana var. virginiana - |Juniperus virginiana var. silicicola - "
+pine_plots <- veg2[grep(pine_substr, veg2$commPrimaryScientific), ]
+
+pine_dat <- dat_rem %>% filter(commPrimaryScientific %in% pine_plots$commPrimaryScientific)  # 5082 rows
+hardwood_dat <- dat_rem %>% filter(!commPrimaryScientific %in% pine_plots$commPrimaryScientific) # 37733 rows
+write.csv(pine_dat, "chap3_pine_plots.csv", row.names = FALSE)
+write.csv(hardwood_dat, "chap3_hardw_plots.csv", row.names = FALSE)
+write.csv(dat_rem, "chap3_data_by_plot_culled.csv", row.names = FALSE)
+
+
+
+# after you select plots, determine which species to include in analysis
+# based on the extent of their distributions across the provinces
+# first combine coastal fringe with coastal plain
+dat$province_3 <- ifelse(dat$province == "CoastalFringe", "CoastalPlain", dat$province)
+
+# determine how many plots each species is located on, grouped by province
+species <- dat %>% select(Plot, species_name, province_3)
+species <- species %>% distinct()
+species_nplots <- species %>% group_by(species_name, province_3) %>% summarise(nplots = n())
+
+# add column with number of provinces each species is found within
+species_nplots <- species_nplots %>% group_by(species_name) %>% mutate(n_prov = n())
+write.csv(species_nplots, "chap3_nplots_by_species-province.csv", row.names = FALSE)
+
+
+# after culling df, re-run PCA on soil measurements
+# from column 10 (organic) through column 30 (density)
+require(vegan)
+soil <- dat %>% select(organic:density)
+soil <- soil[complete.cases(soil), ]
+pca <- rda(soil)
+#biplot(pca, display = c("sites", "species"), type = c("text", "points"))
+
+soil$comp1 <- pca$CA$u[,1]
+soil$comp2 <- pca$CA$u[,2]
+# dat$ID <- row.names(dat)  # ID should already be there
+soil$ID <- row.names(soil)
+dat <- left_join(dat, soil[,22:24], by = "ID")
+
+ 
  

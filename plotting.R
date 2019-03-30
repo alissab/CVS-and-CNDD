@@ -15,7 +15,7 @@ dat16 <- dat_plot[dat_plot$realUTMZone == 16, ]
 dat17 <- dat_plot[dat_plot$realUTMZone == 17, ]
 dat18 <- dat_plot[dat_plot$realUTMZone == 18, ]
 
-# need to remove NAs before next step
+# need to remove NAs before next step (shouldn't be any...)
 dat16 <- dat16[!is.na(dat16$realUTME), ]
 dat17 <- dat17[!is.na(dat17$realUTME), ]
 dat18 <- dat18[!is.na(dat18$realUTME), ]
@@ -32,6 +32,21 @@ dat18utm <- SpatialPoints(dat18[ , c("realUTME", "realUTMN")],
 dat16ll <- spTransform(dat16utm, CRS("+proj=longlat"))
 dat17ll <- spTransform(dat17utm, CRS("+proj=longlat"))
 dat18ll <- spTransform(dat18utm, CRS("+proj=longlat"))
+
+# to extract moisture index data (.tif files) in ArcMap, need to give
+# ArcMap lat/long values in table format
+dat16_coords <- as.data.frame(dat16ll@coords)
+dat17_coords <- as.data.frame(dat17ll@coords)
+dat18_coords <- as.data.frame(dat18ll@coords)
+dat16_coords$ID <- rownames(dat16_coords)
+dat17_coords$ID <- rownames(dat17_coords)
+dat18_coords$ID <- rownames(dat18_coords)
+dat_plot$ID <- rownames(dat_plot)
+dat_coords <- rbind(dat16_coords, dat17_coords, dat18_coords)
+names(dat_coords) <- c("X", "Y", "ID")
+
+
+
 
 # create maps
 # base map

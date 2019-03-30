@@ -37,7 +37,7 @@ veg <- veg %>% filter(!is.na(commPrimaryCommon))
 # makes sense to stick with mixed hardwood forests, leaving out pine-dominated stuff
 # OR just analyze them separately
 # trick is to remove veg types with sufficiently unique recruitment patterns that those plots
-# would mask recruitment pattern of interest - CNDD
+# would mask recruitment pattern of interest
 
 # remove maritime/estuarine fringe/fringe/marsh hammock; highly affected by salt input
 # remove longleaf savannas/barrens/sandhill scrubs; soil moisture/nutrients sufficiently diff't
