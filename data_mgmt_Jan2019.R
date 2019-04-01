@@ -446,6 +446,11 @@ write.csv(dat5, "chap3_data_module.csv", row.names = FALSE)
 # create another df that combines all modules, so sampling unit becomes every combination
 # of plot/species (suggested by committee in Feb 2019)
 
+
+# THIS IS WHERE YOU MESSED UP (BELOW)
+# NEED TO GROUP BY PLOT TO GET TOT_PLOT_SAP_COUNT, NOT BY PLOT/SPECIES
+# STILL NEED TO FIX THIS AS OF 4/1
+
 # first extract mod-specific info that needs to be summarized on the plot scale, then summarize
 mod_summ <- dat5 %>% select(Plot, species, sap_count, tot_mod_sap_count)
 mod_summ <- mod_summ %>% group_by(Plot, species) %>% summarise(sap_plot_count = sum(sap_count), 
@@ -468,6 +473,12 @@ write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 # tot_plot_sap_count = total # sap stems across plot
 # plot_cons_tree_BA = adult BA of conspecifics across plot
 # plot_tree_BA = total adult BA across plot
+
+
+# oops, need to remove duplicated rows after running above code, otherwise you have multiple
+# rows for each plot count
+dat7 <- dat7 %>% select(-Mod, -sap_count, -tree_BA) %>% group_by(Plot, species) %>% 
+
 
 
 # 27 MARCH UPDATE: YOU UPDATED THE CHAP3_DATA_BY_PLOT DF WITH TWI, BUT HAVE NOT YET
