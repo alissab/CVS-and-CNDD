@@ -63,12 +63,13 @@ names(plot_pca)[1:2] <- c("x", "y")
 
 par(mar = rep(0.5, 4))
 basemap <- map_data(database="state", regions=c("north carolina", "south carolina"))
+
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
   geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = pc1), 
-             alpha = 0.4, size = 2.5) + 
-  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 0, low="red", mid="white",
                         high="blue", name="Soil PCA\nAxis 1") +
   coord_fixed(1.15) +
   theme_classic() + 
@@ -84,8 +85,8 @@ ggplot() +
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
   geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = pc2), 
-             alpha = 0.4, size = 2.5) + 
-  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 0, low="red", mid="white",
                         high="blue", name="Soil PCA\nAxis 2") +
   coord_fixed(1.15) +
   theme_classic() + 
@@ -98,15 +99,14 @@ ggplot() +
 
 
 plot_pca$twi_plot <- with(plot_pca, ifelse(
-  twi>400, 500, twi
-))
+  twi>=300, 300, twi))
 
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
   geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = twi_plot), 
              alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+  scale_color_gradient2(midpoint = 130, low="red", mid="white",
                         high="blue", name="Total wetness\nindex") +
   coord_fixed(1.15) +
   theme_classic() + 
@@ -116,6 +116,85 @@ ggplot() +
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
+
+
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = mean_prec), 
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 5, low="red", mid="white",
+                        high="blue", name="Mean annual\nprecipitation") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = tmax), 
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 33, low="red", mid="white",
+                        high="blue", name="Annual maximum\ntemperature") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+plot_pca$cons_plot <- with(plot_pca, ifelse(
+  plot_cons_tree_BA>=5000, 5000, plot_cons_tree_BA))
+
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = cons_plot), 
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 2000, low="red", mid="white",
+                        high="blue", name="Conspecific\nbasal area") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+plot_pca$BA_plot <- with(plot_pca, ifelse(
+  plot_tree_BA>=20000, 20000, plot_tree_BA))
+
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = BA_plot), 
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 11000, low="red", mid="white",
+                        high="blue", name="Conspecific\nbasal area") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+
+
+
 
 # MAPPING plot locations by species
 cofl <- dat4[dat4$species == "Caca", ]

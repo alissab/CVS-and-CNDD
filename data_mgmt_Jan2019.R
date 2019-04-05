@@ -697,3 +697,29 @@ dat_pine <- read.csv("chap3_pine_plots.csv", stringsAsFactors = F, na.strings=c(
 dat_pine <- left_join(dat_pine, soil_dat[ ,c(1, 27, 28)], by = "Plot")
 write.csv(dat_pine, "chap3_pine_plots_pca.csv", row.names = FALSE)
 
+
+
+
+# there are extreme outliers in twi, plot_cons_tree_BA, and plot_tree_BA that 
+# should be removed. for twi, these very wet plots are probably not the veg type
+# you're wanting to analyze. for others, outlier removal will help with model 
+# convergence
+
+dat <- read.csv("chap3_data_by_plot_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat <- dat %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
+
+dat_culled <- read.csv("chap3_data_by_plot_pca_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
+dat_culled <- dat_culled %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
+
+dat_hard <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_hard <- dat_hard %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
+
+dat_pine <- read.csv("chap3_pine_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_pine <- dat_pine %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
+
+
+

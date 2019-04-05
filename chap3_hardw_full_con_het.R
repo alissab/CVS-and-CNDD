@@ -6,7 +6,14 @@ require(brms)
 require(future)
 require(mice)
 
-dat <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
+# MAKE SURE TO CHANGE THE NAME OF THE DATASET YOU'RE USING FOR ALL LONGLEAF .R FILES
+# SINCE YOU'VE REMOVED OUTLIERS
+# MIGHT WANT TO RE-RUN PCA BEFORE DOING THIS
+# THEN RE-MAKE MAPS 
+# RE-RUN ANALYSES, MAKING SURE TO CALL 'LOO' IN THE LONGLEAF FILE, OTHERWISE IT
+# WON'T WORK
+
+dat <- read.csv("chap3_hardw_plots_outl_rem.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
 dat <- dat %>% filter(species_name != "other")
 dat$plot_het_tree_BA <- with(dat, plot_tree_BA - plot_cons_tree_BA)
 
