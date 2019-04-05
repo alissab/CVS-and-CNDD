@@ -91,17 +91,12 @@ va_keep <- va_plot[va_plot$plot %in% plot_names$cvs_plot,]
 plot <- rbind(plot, va_keep)
 
 
-# soil data downloaded from CVS database as plot-averaged, horizon-averaged values
-soil <- soil %>% select(Author_Observation_Code, soilOrganic_avg, soilSand_avg, soilSilt_avg, 
-                        soilClay_avg, soilPH_avg, exchangeCapacity_avg, baseSaturation_avg, 
-                        N_avg, S_avg, P_avg, Ca_ppm_avg, Mg_ppm_avg, K_ppm_avg, Na_ppm_avg, 
-                        B_ppm_avg, Fe_ppm_avg, Mn_ppm_avg, Cu_ppm_avg, Zn_ppm_avg, Al_ppm_avg, 
-                        Density_avg)
-
-colnames(soil) <- c("plot","organic","sand","silt","clay","ph","exchCap","baseSat","N","S","P",
-                  "Ca_ppm","Mg_ppm","K_ppm","Na_ppm","B_ppm",
-                  "Fe_ppm","Mn_ppm","Cu_ppm","Zn_ppm","Al_ppm","density")
-
+# soil data downloaded from CVS database as plot-averaged, horizon-averaged (???) values
+colnames(soil) <- c("organic","sand","silt","clay","coarse","ph","exchCap","baseSat","N","S","P",
+                  "Ca_ppm","Mg_ppm","K_ppm","Na_ppm","Ca_pct","Mg_pct","K_pct","Na_pct","Other_pct",
+                  "H_pct","B_ppm","Fe_ppm","Mn_ppm","Cu_ppm","Zn_ppm","Al_ppm","density",
+                  "Ca_Mg_ppm","obs_ID","Plot")
+soil <- soil %>% select(-obs_ID)
 
 # clean stem data
 
@@ -419,6 +414,8 @@ keep <- test$Plot   # Plots to keep
 dat5 <- dat4 %>% filter(Plot %in% keep)
 
 
+# ONLY RUN PCA CODE CHUNK BELOW IF YOU DO NOT END UP CULLING DATASET FURTHER
+# OTHEWISE, WAIT UNTIL CULLING IS COMPLETED BEFORE RUNNING SOIL PCA
 # running PCA on soil vars to get soil nutrient PCA axis for modeling
 # from column 10 (organic) through column 30 (density)
 require(vegan)
@@ -446,25 +443,28 @@ write.csv(dat5, "chap3_data_module.csv", row.names = FALSE)
 # create another df that combines all modules, so sampling unit becomes every combination
 # of plot/species (suggested by committee in Feb 2019)
 
+# extract mod-specific info that needs to be summarized on the plot scale, then summarize
+mod_summ_c_sap <- dat5 %>% select(Plot, species, sap_count)
+mod_summ_c_sap <- mod_summ_c_sap %>% group_by(Plot, species) %>% summarise(sap_plot_count = 
+                                                                             sum(sap_count))
+mod_summ_tot_sap <- dat5 %>% select(Plot, sap_count)
+mod_summ_tot_sap <- mod_summ_tot_sap %>% group_by(Plot) %>% summarise(tot_plot_sap_count = 
+                                                                        sum(sap_count))
 
-# THIS IS WHERE YOU MESSED UP (BELOW)
-# NEED TO GROUP BY PLOT TO GET TOT_PLOT_SAP_COUNT, NOT BY PLOT/SPECIES
-# STILL NEED TO FIX THIS AS OF 4/1
+dat6 <- dat5 %>% select(-Mod, -sap_count, -tree_BA, -ModArea, -subsampling_factor, -moduleArea, 
+                        -PlotArea, -tot_mod_sap_count)
+dat6 <- dat6 %>% distinct()
+dat6 <- inner_join(mod_summ_c_sap, dat6, by=c("Plot", "species"))
+dat6 <- inner_join(dat6, mod_summ_tot_sap, by=c("Plot"))
 
-# first extract mod-specific info that needs to be summarized on the plot scale, then summarize
-mod_summ <- dat5 %>% select(Plot, species, sap_count, tot_mod_sap_count)
-mod_summ <- mod_summ %>% group_by(Plot, species) %>% summarise(sap_plot_count = sum(sap_count), 
-                                                              tot_plot_sap_count = sum(tot_mod_sap_count))
-
-# merge plot data with full dataframe
-dat6 <- left_join(dat5, mod_summ, by=c("Plot", "species"))
 
 # add moisture index info (from Conghe Song)
 # TWI = total wetness index = slope/UAA (upslope accumulated area)
-moisture <- read.csv("twi_data.csv", stringsAsFactors = FALSE)
+moisture <- read.csv("twi_with_NAs.csv", stringsAsFactors = FALSE)
 moisture <- moisture %>% select(ID, twi)
-get_plot <- left_join(moisture, dat6[, c("Plot", "ID"), ], by = "ID")
-dat7 <- left_join(dat6, get_plot[,c(2, 3)], by = "Plot")
+names(moisture) <- c("Plot", "twi")
+
+dat7 <- left_join(dat6, moisture, by = "Plot")
 write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 
 # this is the final df to use if you want the sampling unit to be each combination of 
@@ -473,17 +473,6 @@ write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 # tot_plot_sap_count = total # sap stems across plot
 # plot_cons_tree_BA = adult BA of conspecifics across plot
 # plot_tree_BA = total adult BA across plot
-
-
-# oops, need to remove duplicated rows after running above code, otherwise you have multiple
-# rows for each plot count
-dat7 <- dat7 %>% select(-Mod, -sap_count, -tree_BA) %>% group_by(Plot, species) %>% 
-
-
-
-# 27 MARCH UPDATE: YOU UPDATED THE CHAP3_DATA_BY_PLOT DF WITH TWI, BUT HAVE NOT YET
-# RE-RUN THE CULLING CODE BELOW. WAIT UNTIL YOU TALK TO BOB ABOUT THIS APPROACH
- 
 
 
 # need to cull dataset to remove inappropriate vegetation types from analysis
@@ -498,20 +487,20 @@ veg <- veg %>% filter(!is.na(commPrimaryCommon))
 # would mask recruitment pattern of interest
 
 # remove maritime/estuarine fringe/fringe/marsh hammock; highly affected by salt input
-# remove longleaf savannas/barrens/sandhill scrubs; soil moisture/nutrients sufficiently diff't
+# remove savannas/barrens/sandhill scrubs; soil moisture/nutrients sufficiently diff't
 # include levee forest/bottomland hardwoods/floodplains, but remove marsh/peatland/bogs/swamps/impoundments; soil sufficiently diff't
 # include alluvial forests/headwater stream forests/nonriverine wet hardwood forests/wet marl?
 # remove pocosins, such as pond pine woodland/bay forest/pocosin/atlantic white cedar forest/canebreaks
-# ??? remove pine savannas/wet pine flatwoods/sandhill seep/cypress savannas
+# wet pine flatwoods/sandhill seep/cypress savannas
 # remove tidal red cedar forest
-veg_substr <- "Fringe|Maritime|Marsh|Longleaf|Peat|Bog|Swamp|Pocosin|Loblolly|Pond-cypress|Sandhill Scrub|Table Mountain Pine|Hemlock|Successional|Sandhill|Fraser Fir|Hammock|Outcrop|Tidal|Bluff"
+veg_substr <- "Fringe|Maritime|Marsh|Peat|Bog|Swamp|Pocosin|Loblolly|Pond-cypress|Sandhill Scrub|Successional|Sandhill|Hammock|Outcrop|Tidal|Bluff"
 veg_remove <- veg[grep(veg_substr, veg$commPrimaryCommon), ]
 dat_rem <- dat %>% filter(!commPrimaryCommon %in% veg_remove$commPrimaryCommon)
 
 # looks OK, but there are a lot of commPrimaryCommon cells with NA, altho they do have CEGLs
 # there are fewer NAs using commPrimaryScientific
-nas <- dat_rem[is.na(dat_rem$commPrimaryScientific),]  # 1257 rows with veg community type NAs
-nrow(nas[is.na(nas$commPrimaryCode),])   # of those, 1000 rows contain CEGL NAs
+nas <- dat_rem[is.na(dat_rem$commPrimaryScientific),]
+nrow(nas[is.na(nas$commPrimaryCode),])
 
 # find veg community types for those that DO have CEGLs (257 of these)
 # leave out the 1000 rows that do not have any veg type names/codes?
@@ -544,26 +533,26 @@ dat_rem$commPrimaryScientific <- ifelse(
   )
 )
 
-# there are 1000 NAs for veg type - scientific names, and 7723 for veg type - common names
-# so start culling data using scientific names now
+# start culling data using scientific names
 # remove "Ruderal" and "Sabal palmetto" plots
 remove2 <- dat_rem[grep("Ruderal|Sabal palmetto ", dat_rem$commPrimaryScientific), ]
-dat_rem <- dat_rem[!dat_rem$ID %in% remove2$ID, ]
+dat_rem <- dat_rem[!dat_rem$Plot %in% remove2$Plot, ]
 
 # this second culling iteration leaves you with all the plots you decided to keep before, 
 # plus those plots you added in manually using CEGL codes
 veg2 <- dat_rem %>% select(Plot, commPrimaryScientific)
 veg2 <- distinct(veg2)
 veg2 <- veg2 %>% group_by(commPrimaryScientific) %>% summarise(n = n())
-veg2 <- veg2 %>% filter(!is.na(commPrimaryScientific))  # there are 73 NA rows
+veg2 <- veg2 %>% filter(!is.na(commPrimaryScientific))
 
 # extreme environments/ruderal plots have already been removed, so now you just want 
 # to separate mixed hardwood from pine plots
-pine_substr <- "Pinus palustris, Pinus|Pinus palustris / |Picea rubens - |Picea rubens - |Pinus echinata - |Pinus echinata / Schizachyrium| / Juniperus virginiana|Pinus elliottii var. elliottii |Pinus serotina|Pinus strobus|Pinus taeda - Chamaecyparis|Pinus taeda - Quercus|Pinus virginiana |Taxodium distichum - |Tsuga canadensis -|Juniperus virginiana var. virginiana - |Juniperus virginiana var. silicicola - "
+pine_substr <- "Abies fraseri /|Pinus palustris |Picea rubens - |Picea rubens - |Pinus echinata - |Pinus echinata / Schizachyrium|Pinus palustris - |Pinus palustris / | / Juniperus virginiana|Pinus elliottii var. elliottii |Pinus rigida |Pinus serotina|Pinus strobus|Pinus taeda - Chamaecyparis|Pinus taeda - Quercus|Pinus virginiana |Taxodium distichum - Fraxinus|Taxodium distichum - Liquidambar|Taxodium distichum - Taxodium|Tsuga canadensis / Kalmia|Tsuga canadensis / Rhododendron maximum - |Tsuga canadensis - Halesia|Tsuga canadensis - Liriodendron|Tsuga caroliniana |Juniperus virginiana var. virginiana - |Juniperus virginiana var. silicicola - "
 pine_plots <- veg2[grep(pine_substr, veg2$commPrimaryScientific), ]
+hardw_plots <- veg2[!veg2$commPrimaryScientific %in% pine_plots$commPrimaryScientific, ]
 
-pine_dat <- dat_rem %>% filter(commPrimaryScientific %in% pine_plots$commPrimaryScientific)  # 5082 rows
-hardwood_dat <- dat_rem %>% filter(!commPrimaryScientific %in% pine_plots$commPrimaryScientific) # 37733 rows
+pine_dat <- dat_rem %>% filter(commPrimaryScientific %in% pine_plots$commPrimaryScientific)  # 3274 rows
+hardwood_dat <- dat_rem %>% filter(commPrimaryScientific %in% hardw_plots$commPrimaryScientific) # 16282 rows
 write.csv(pine_dat, "chap3_pine_plots.csv", row.names = FALSE)
 write.csv(hardwood_dat, "chap3_hardw_plots.csv", row.names = FALSE)
 write.csv(dat_rem, "chap3_data_by_plot_culled.csv", row.names = FALSE)
@@ -588,16 +577,123 @@ write.csv(species_nplots, "chap3_nplots_by_species-province.csv", row.names = FA
 # after culling df, re-run PCA on soil measurements
 # from column 10 (organic) through column 30 (density)
 require(vegan)
-soil <- dat %>% select(organic:density)
-soil <- soil[complete.cases(soil), ]
-pca <- rda(soil)
-#biplot(pca, display = c("sites", "species"), type = c("text", "points"))
 
-soil$comp1 <- pca$CA$u[,1]
-soil$comp2 <- pca$CA$u[,2]
-# dat$ID <- row.names(dat)  # ID should already be there
-soil$ID <- row.names(soil)
-dat <- left_join(dat, soil[,22:24], by = "ID")
+# ONLY SELECT SOIL VARS YOU WANT TO USE AS FERTILITY PROXY
+# ONLY USE UNIQUE VALUES (ONE SET OF MEASURES PER PLOT)
+# REMOVE NAS
+# SCALE MEASURES BEFORE RUNNING PCA - CHECK HISTOGRAMS TO MAKE SURE NORMAL
+# as of 3 April, dat10 is "chap3_data_by_plot.csv"
+# dat10 <- dat9 %>% select(1:25, 68:75, 26:67)
+soil_use <- dat10 %>% select(Plot, organic:Ca_Mg_ppm)
+soil_use <- soil_use %>% select(-N, -S, -P, -coarse)
+soil_use <- soil_use %>% distinct
+soil_use <- soil_use[complete.cases(soil_use), ]
+soil_use[,-1] <- sapply(soil_use[,-1], as.numeric)
 
- 
- 
+par(mfrow=c(6, 5))
+par(mar=rep(0.5, 4))
+sapply(soil_use[, -1], hist)  # look for data shape
+
+# remove outliers
+out_organic <- boxplot(soil_use$organic, plot=FALSE)$out
+soil_use[,"organic"] <- ifelse(
+  soil_use$organic %in% out_organic, NA, soil_use$organic)
+
+out_exchCap <- boxplot(soil_use$exchCap, plot=FALSE)$out
+soil_use[,"exchCap"] <- ifelse(
+  soil_use$exchCap %in% out_exchCap, NA, soil_use$exchCap)
+
+out_baseSat <- boxplot(soil_use$baseSat, plot=FALSE)$out
+soil_use[,"baseSat"] <- ifelse(
+  soil_use$baseSat %in% out_baseSat, NA, soil_use$baseSat)
+
+out_Ca_ppm <- boxplot(soil_use$Ca_ppm, plot=FALSE)$out
+soil_use[,"Ca_ppm"] <- ifelse(
+  soil_use$Ca_ppm %in% out_Ca_ppm, NA, soil_use$Ca_ppm)
+
+out_Mg_ppm <- boxplot(soil_use$Mg_ppm, plot=FALSE)$out
+soil_use[,"Mg_ppm"] <- ifelse(
+  soil_use$Mg_ppm %in% out_Mg_ppm, NA, soil_use$Mg_ppm)
+
+out_Na_ppm <- boxplot(soil_use$Na_ppm, plot=FALSE)$out
+soil_use[,"Na_ppm"] <- ifelse(
+  soil_use$Na_ppm %in% out_Na_ppm, NA, soil_use$Na_ppm)
+
+out_B_ppm <- boxplot(soil_use$B_ppm, plot=FALSE)$out
+soil_use[,"B_ppm"] <- ifelse(
+  soil_use$B_ppm %in% out_B_ppm, NA, soil_use$B_ppm)
+
+out_Fe_ppm <- boxplot(soil_use$Fe_ppm, plot=FALSE)$out
+soil_use[,"Fe_ppm"] <- ifelse(
+  soil_use$Fe_ppm %in% out_Fe_ppm, NA, soil_use$Fe_ppm)
+
+out_Mn_ppm <- boxplot(soil_use$Mn_ppm, plot=FALSE)$out
+soil_use[,"Mn_ppm"] <- ifelse(
+  soil_use$Mn_ppm %in% out_Mn_ppm, NA, soil_use$Mn_ppm)
+
+out_Cu_ppm <- boxplot(soil_use$Cu_ppm, plot=FALSE)$out
+soil_use[,"Cu_ppm"] <- ifelse(
+  soil_use$Cu_ppm %in% out_Cu_ppm, NA, soil_use$Cu_ppm)
+
+out_Zn_ppm <- boxplot(soil_use$Zn_ppm, plot=FALSE)$out
+soil_use[,"Zn_ppm"] <- ifelse(
+  soil_use$Zn_ppm %in% out_Zn_ppm, NA, soil_use$Zn_ppm)
+
+out_Mg_pct <- boxplot(soil_use$Mg_pct, plot=FALSE)$out
+soil_use[,"Mg_pct"] <- ifelse(
+  soil_use$Mg_pct %in% out_Mg_pct, NA, soil_use$Mg_pct)
+
+out_K_pct <- boxplot(soil_use$K_pct, plot=FALSE)$out
+soil_use[,"K_pct"] <- ifelse(
+  soil_use$K_pct %in% out_K_pct, NA, soil_use$K_pct)
+
+out_Na_pct <- boxplot(soil_use$Na_pct, plot=FALSE)$out
+soil_use[,"Na_pct"] <- ifelse(
+  soil_use$Na_pct %in% out_Na_pct, NA, soil_use$Na_pct)
+
+out_Other_pct <- boxplot(soil_use$Other_pct, plot=FALSE)$out
+soil_use[,"Other_pct"] <- ifelse(
+  soil_use$Other_pct %in% out_Other_pct, NA, soil_use$Other_pct)
+
+out_Ca_Mg_ppm <- boxplot(soil_use$Ca_Mg_ppm, plot=FALSE)$out
+soil_use[,"Ca_Mg_ppm"] <- ifelse(
+  soil_use$Ca_Mg_ppm %in% out_Ca_Mg_ppm, NA, soil_use$Ca_Mg_ppm)
+
+sapply(soil_use[,-1], hist)
+
+soil_scale <- as.data.frame(sapply(soil_use[,-1], scale))
+soil_scale <- as.data.frame(c(soil_use[,1], soil_scale))
+sapply(soil_scale[,-1], hist)
+
+# looks good, save scaled, outlier-removed soil data
+write.csv(soil_scale, "chap3_soil_scaled_outlier_rem.csv", row.names = FALSE)
+
+soil_scale <- soil_scale %>% select(-Plot)
+soil_scale <- soil_scale[complete.cases(soil_scale),]
+pca <- rda(soil_scale)
+biplot(pca, display = c("sites", "species"), type = c("text", "points"))
+
+soil_scale$pc1 <- pca$CA$u[,1]
+soil_scale$pc2 <- pca$CA$u[,2]
+soil_dat <- soil_scale
+
+soil_scale <- read.csv("chap3_soil_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
+soil_scale <- soil_scale[complete.cases(soil_scale),]
+soil_dat <- cbind(Plot = soil_scale[,1], soil_dat)
+
+dat <- read.csv("chap3_data_by_plot.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_soil <- left_join(dat, soil_dat[ ,c(1, 27, 28)], by = "Plot")
+write.csv(dat_soil, "chap3_data_by_plot_pca.csv", row.names = FALSE)
+
+dat_culled <- read.csv("chap3_data_by_plot_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
+dat_culled <- left_join(dat_culled, soil_dat[ ,c(1, 27, 28)], by = "Plot")
+write.csv(dat_culled, "chap3_data_by_plot_pca_culled.csv", row.names = FALSE)
+
+dat_hard <- read.csv("chap3_hardw_plots.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_hard <- left_join(dat_hard, soil_dat[ ,c(1, 27, 28)], by = "Plot")
+write.csv(dat_hard, "chap3_hardw_plots_pca.csv", row.names = FALSE)
+
+dat_pine <- read.csv("chap3_pine_plots.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_pine <- left_join(dat_pine, soil_dat[ ,c(1, 27, 28)], by = "Plot")
+write.csv(dat_pine, "chap3_pine_plots_pca.csv", row.names = FALSE)
+

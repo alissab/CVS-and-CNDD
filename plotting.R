@@ -3,22 +3,18 @@ require(rgdal)
 require(maps)
 require(ggplot2)
 
-dat <- read.csv("chap3_data_by_plot.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+dat <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
 
 # MAPPING
 # convert UTMs to lat/longs
 # need to separate by zone (3 zones) then bind back together
 dat_plot <- dat[!duplicated(dat$Plot), ]
 dat_plot <- dat_plot[!is.na(dat_plot$realUTMZone), ]
+rownames(dat_plot) <- dat_plot$Plot
 
 dat16 <- dat_plot[dat_plot$realUTMZone == 16, ]
 dat17 <- dat_plot[dat_plot$realUTMZone == 17, ]
 dat18 <- dat_plot[dat_plot$realUTMZone == 18, ]
-
-# need to remove NAs before next step (shouldn't be any...)
-dat16 <- dat16[!is.na(dat16$realUTME), ]
-dat17 <- dat17[!is.na(dat17$realUTME), ]
-dat18 <- dat18[!is.na(dat18$realUTME), ]
 
 # create UTM coordinates
 dat16utm <- SpatialPoints(dat16[ , c("realUTME", "realUTMN")],
@@ -33,19 +29,6 @@ dat16ll <- spTransform(dat16utm, CRS("+proj=longlat"))
 dat17ll <- spTransform(dat17utm, CRS("+proj=longlat"))
 dat18ll <- spTransform(dat18utm, CRS("+proj=longlat"))
 
-# to extract moisture index data (.tif files) in ArcMap, need to give
-# ArcMap lat/long values in table format
-dat16_coords <- as.data.frame(dat16ll@coords)
-dat17_coords <- as.data.frame(dat17ll@coords)
-dat18_coords <- as.data.frame(dat18ll@coords)
-dat16_coords$ID <- rownames(dat16_coords)
-dat17_coords$ID <- rownames(dat17_coords)
-dat18_coords$ID <- rownames(dat18_coords)
-dat_plot$ID <- rownames(dat_plot)
-dat_coords <- rbind(dat16_coords, dat17_coords, dat18_coords)
-names(dat_coords) <- c("X", "Y", "ID")
-
-
 
 
 # create maps
@@ -58,7 +41,7 @@ map(database="state", regions=c("north carolina", "south carolina",
 points(dat16ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 points(dat17ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 points(dat18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
-title(main = "CVS plot locations, n = 1943")
+title(main = "CVS mixed hardwood plot locations, n = 1113 \n \n")
 
 
 
@@ -70,25 +53,23 @@ title(main = "CVS plot locations, n = 1943")
 ll16 <- as.data.frame(dat16ll@coords)
 ll17 <- as.data.frame(dat17ll@coords)
 ll18 <- as.data.frame(dat18ll@coords)
-ll16$ID <- rownames(ll16)
-ll17$ID <- rownames(ll17)
-ll18$ID <- rownames(ll18)
-ll_all <- rbind(ll16, ll17, ll18)
-ll_all$ID <- as.integer(ll_all$ID)
-plot_pca <- left_join(ll_all, dat[ ,c("ID", "comp1", "comp2")], by="ID")
-names(plot_pca)[4:5] <- c("PCA1", "PCA2")
+
+ll16 <- cbind(ll16, dat16)
+ll17 <- cbind(ll17, dat17)
+ll18 <- cbind(ll18, dat18)
+
+plot_pca <- rbind(ll16, ll17, ll18)
+names(plot_pca)[1:2] <- c("x", "y")
 
 par(mar = rep(0.5, 4))
-basemap <- map_data(database="state", regions=c("north carolina", "south carolina", 
-                                "florida", "georgia"))
+basemap <- map_data(database="state", regions=c("north carolina", "south carolina"))
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plot_pca, mapping = aes(x = realUTME, y = realUTMN, color = PCA1), 
-             alpha = 0.5) + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = pc1), 
+             alpha = 0.4, size = 2.5) + 
   scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
-                        high="blue") +
-  labs(fill = "Soil PCA \naxis 1") +
+                        high="blue", name="Soil PCA\nAxis 1") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -97,17 +78,15 @@ ggplot() +
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
-
 
 
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plot_pca, mapping = aes(x = realUTME, y = realUTMN, color = PCA2), 
-             alpha = 0.5) + 
-  scale_color_gradient2(low="red", mid="white",
-                        high="blue") +
-  labs(fill = "Soil PCA \naxis 1") +
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = pc2), 
+             alpha = 0.4, size = 2.5) + 
+  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+                        high="blue", name="Soil PCA\nAxis 2") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -118,108 +97,27 @@ ggplot() +
         axis.title.y = element_blank())
 
 
+plot_pca$twi_plot <- with(plot_pca, ifelse(
+  twi>400, 500, twi
+))
 
-
-
-# find loblolly and longleaf plots for Bob to look at
-longleaf_bob <- as.data.frame(dat[grep("longleaf", dat$commPrimaryCommon, ignore.case = TRUE), 
-                    "commPrimaryCommon"])
-longleaf_bob <- distinct(longleaf_bob)
-names(longleaf_bob) <- "comm"
-loblolly_bob <- as.data.frame(dat[grep("loblolly", dat$commPrimaryCommon, ignore.case = TRUE), 
-                    "commPrimaryCommon"])
-loblolly_bob <- distinct(loblolly_bob)
-names(loblolly_bob) <- "comm"
-for_bob <- rbind(longleaf_bob, loblolly_bob)
-
-# find maritime plots for Bob
-maritime <- as.data.frame(dat[grep("maritime", dat$commPrimaryCommon, ignore.case = TRUE), 
-                              "commPrimaryCommon"])
-maritime <- distinct(maritime)
-names(maritime) <- "comm"
-
-# find peatlands
-peat <- as.data.frame(dat[grep("peat", dat$commPrimaryCommon, ignore.case = TRUE), 
-                          "commPrimaryCommon"])
-peat <- distinct(peat)
-names(peat) <- "comm"
-
-# find pocosin
-pocosin <- as.data.frame(dat[grep("pocosin", dat$commPrimaryCommon, ignore.case = TRUE), 
-                             "commPrimaryCommon"])
-pocosin <- distinct(pocosin)
-names(pocosin) <- "comm"
-
-# find swamps
-swamp <- as.data.frame(dat[grep("swamp", dat$commPrimaryCommon, ignore.case = TRUE), 
-                           "commPrimaryCommon"])
-swamp <- distinct(swamp)
-names(swamp) <- "comm"
-
-# find coastal fringe plots
-fringe <- as.data.frame(dat[grep("fringe", dat$commPrimaryCommon, ignore.case = TRUE), 
-                            "commPrimaryCommon"]) 
-fringe <- distinct(fringe)
-names(fringe) <- "comm"
-
-# bind unwanted plots together
-for_bob <- rbind(for_bob, maritime, peat, pocosin, swamp, fringe)
-write.csv(for_bob, "CVS_communities_to_remove.csv", row.names = FALSE)
-
-# make map of plots that you want to remove
-plots_remove <- dat[dat$commPrimaryCommon %in% for_bob$comm, ]
-plots_remove <- plots_remove[!duplicated(plots_remove$Plot), ]
-plots_remove <- plots_remove[!is.na(plots_remove$realUTMZone), ]
-
-plots_remove16 <- plots_remove[plots_remove$realUTMZone == 16, ]
-plots_remove17 <- plots_remove[plots_remove$realUTMZone == 17, ]
-plots_remove18 <- plots_remove[plots_remove$realUTMZone == 18, ]
-
-# create UTM coordinates
-plots_remove16utm <- SpatialPoints(plots_remove16[ , c("realUTME", "realUTMN")],
-                          proj4string = CRS("+proj=utm +zone=16"))
-plots_remove17utm <- SpatialPoints(plots_remove17[ , c("realUTME", "realUTMN")],
-                          proj4string = CRS("+proj=utm +zone=17"))
-plots_remove18utm <- SpatialPoints(plots_remove18[ , c("realUTME", "realUTMN")],
-                          proj4string = CRS("+proj=utm +zone=18"))
-
-# convert to lat/long
-plots_remove16ll <- spTransform(plots_remove16utm, CRS("+proj=longlat"))
-plots_remove17ll <- spTransform(plots_remove17utm, CRS("+proj=longlat"))
-plots_remove18ll <- spTransform(plots_remove18utm, CRS("+proj=longlat"))
-
-# create maps
-# base map
-par(mar=rep(0.5, 4))
-map(database="state", regions=c("north carolina", "south carolina", 
-                                "florida", "georgia"))
-
-# add points
-points(plots_remove16ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
-points(plots_remove17ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
-points(plots_remove18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
-title(main = "CVS plots to remove, n = 388")
-
-
-
-
-
-
-# remove loblolly and longleaf pine plots
-longleaf_plots <- dat[grep("longleaf", dat$commPrimaryCommon, ignore.case = TRUE), 
-                   c("Plot", "commPrimaryCommon")]
-longleaf_plots <- distinct(longleaf_plots)
-loblolly_plots <- dat[grep("loblolly", dat$commPrimaryCommon, ignore.case = TRUE), 
-                      c("Plot", "commPrimaryCommon")]
-loblolly_plots <- distinct(loblolly_plots)
-
-lobl <- dat %>% filter(commPrimaryCommon ! %in% )
-
-
+ggplot() + 
+  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") + 
+  geom_point(data = plot_pca, mapping = aes(x = x, y = y, color = twi_plot), 
+             alpha = 0.8, size = 4) + 
+  scale_color_gradient2(midpoint = 0.02, low="red", mid="white",
+                        high="blue", name="Total wetness\nindex") +
+  coord_fixed(1.15) +
+  theme_classic() + 
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
 
 # MAPPING plot locations by species
-# pick one species at a time, and convert UTMs to lat/longs
-# need to separate by zone (3 zones) then bind back together
 cofl <- dat4[dat4$species == "Caca", ]
 cofl16 <- cofl[cofl$realUTMZone == 16, ]
 cofl17 <- cofl[cofl$realUTMZone == 17, ]
@@ -254,17 +152,27 @@ points(cofl18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alph
 title(main = "Carpinus caroliniana locations")
 
 
-# you can plot a simple measure of CNDDness
-cofl$cndd <- cofl$plot_cons_tree_BA / cofl$sap_count
-cofl$cndd[is.infinite(cofl$cndd)] <- NA
 
-# map with color ramp for CNDDness
-map.states <- map_data("state", region = c("north carolina", "south carolina"))
 
-ggplot()  +
-  geom_polygon(data = map.states, aes(x=long, y=lat, group=group), 
-               fill = NA, color = "black") + 
-  geom_point(data = cofl, aes(x=Public_Longitude, y=Public_Latitude, 
-                              color=cndd), size = 3, alpha = 0.3) + 
-  scale_colour_gradient(low = "blue", high = "red") + 
-  theme_minimal()
+
+# you can plot a simple measure of CNDDness?
+
+
+
+
+
+# to extract TOPOGRAPHIC MOISTURE INDEX data (.tif files) in ArcMap, need to give
+# ArcMap lat/long values in table format
+dat16_coords <- as.data.frame(dat16ll@coords)
+dat17_coords <- as.data.frame(dat17ll@coords)
+dat18_coords <- as.data.frame(dat18ll@coords)
+
+dat16_coords$ID <- rownames(dat16_coords)
+dat17_coords$ID <- rownames(dat17_coords)
+dat18_coords$ID <- rownames(dat18_coords)
+
+dat_plot$ID <- rownames(dat_plot)
+dat_coords <- rbind(dat16_coords, dat17_coords, dat18_coords)
+names(dat_coords) <- c("X", "Y", "ID")
+
+write.csv(dat_coords, "chap3_data_coords_for_arcgis.csv", row.names = FALSE)
