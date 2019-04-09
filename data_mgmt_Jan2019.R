@@ -475,6 +475,7 @@ write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 # plot_tree_BA = total adult BA across plot
 
 
+
 # need to cull dataset to remove inappropriate vegetation types from analysis
 # look at veg types in df
 dat <- dat7
@@ -559,19 +560,28 @@ write.csv(dat_rem, "chap3_data_by_plot_culled.csv", row.names = FALSE)
 
 
 
-# after you select plots, determine which species to include in analysis
-# based on the extent of their distributions across the provinces
-# first combine coastal fringe with coastal plain
-dat$province_3 <- ifelse(dat$province == "CoastalFringe", "CoastalPlain", dat$province)
 
-# determine how many plots each species is located on, grouped by province
-species <- dat %>% select(Plot, species_name, province_3)
-species <- species %>% distinct()
-species_nplots <- species %>% group_by(species_name, province_3) %>% summarise(nplots = n())
+# there are extreme outliers in twi, plot_cons_tree_BA, and plot_tree_BA that 
+# should be removed. for twi, these very wet plots are probably not the veg type
+# you're wanting to analyze. for others, outlier removal will help with model 
+# convergence
 
-# add column with number of provinces each species is found within
-species_nplots <- species_nplots %>% group_by(species_name) %>% mutate(n_prov = n())
-write.csv(species_nplots, "chap3_nplots_by_species-province.csv", row.names = FALSE)
+dat <- read.csv("chap3_data_by_plot_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat <- dat %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
+
+dat_culled <- read.csv("chap3_data_by_plot_pca_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
+dat_culled <- dat_culled %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
+
+dat_hard <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_hard <- dat_hard %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
+
+dat_pine <- read.csv("chap3_pine_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_pine <- dat_pine %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
+write.csv(dat, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
+
 
 
 # after culling df, re-run PCA on soil measurements
@@ -582,9 +592,11 @@ require(vegan)
 # ONLY USE UNIQUE VALUES (ONE SET OF MEASURES PER PLOT)
 # REMOVE NAS
 # SCALE MEASURES BEFORE RUNNING PCA - CHECK HISTOGRAMS TO MAKE SURE NORMAL
-# as of 3 April, dat10 is "chap3_data_by_plot.csv"
-# dat10 <- dat9 %>% select(1:25, 68:75, 26:67)
-soil_use <- dat10 %>% select(Plot, organic:Ca_Mg_ppm)
+# as of 8 April, dat10 is "chap3_data_by_plot_outl_rem.csv"
+
+# run PCA on hardwood data only; if you decide to include pine plots, you'll 
+# need to re-run PCA; use "chap3_hardw_plots_outl_rem.csv"
+soil_use <- dat %>% select(Plot, organic:Ca_Mg_ppm)
 soil_use <- soil_use %>% select(-N, -S, -P, -coarse)
 soil_use <- soil_use %>% distinct
 soil_use <- soil_use[complete.cases(soil_use), ]
@@ -662,12 +674,15 @@ soil_use[,"Ca_Mg_ppm"] <- ifelse(
 sapply(soil_use[,-1], hist)
 
 soil_scale <- as.data.frame(sapply(soil_use[,-1], scale))
-soil_scale <- as.data.frame(c(soil_use[,1], soil_scale))
+soil_scale <- as.data.frame(cbind(soil_use[,1], soil_scale))
+names(soil_scale)[1] <- "Plot"
 sapply(soil_scale[,-1], hist)
 
 # looks good, save scaled, outlier-removed soil data
-write.csv(soil_scale, "chap3_soil_scaled_outlier_rem.csv", row.names = FALSE)
+write.csv(soil_scale, "chap3_soil_hardw_scaled_outlier_rem.csv", row.names = FALSE)
 
+
+# perform PCA
 soil_scale <- soil_scale %>% select(-Plot)
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 pca <- rda(soil_scale)
@@ -677,49 +692,31 @@ soil_scale$pc1 <- pca$CA$u[,1]
 soil_scale$pc2 <- pca$CA$u[,2]
 soil_dat <- soil_scale
 
-soil_scale <- read.csv("chap3_soil_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
+soil_scale <- read.csv("chap3_soil_hardw_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 soil_dat <- cbind(Plot = soil_scale[,1], soil_dat)
 
-dat <- read.csv("chap3_data_by_plot.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_soil <- left_join(dat, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_soil, "chap3_data_by_plot_pca.csv", row.names = FALSE)
-
-dat_culled <- read.csv("chap3_data_by_plot_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
-dat_culled <- left_join(dat_culled, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_culled, "chap3_data_by_plot_pca_culled.csv", row.names = FALSE)
-
-dat_hard <- read.csv("chap3_hardw_plots.csv", stringsAsFactors = F, na.strings=c("","NA"))
+dat_hard <- read.csv("chap3_hardw_plots_outl_rem.csv", stringsAsFactors = F, na.strings=c("","NA"))
 dat_hard <- left_join(dat_hard, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_hard, "chap3_hardw_plots_pca.csv", row.names = FALSE)
-
-dat_pine <- read.csv("chap3_pine_plots.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_pine <- left_join(dat_pine, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_pine, "chap3_pine_plots_pca.csv", row.names = FALSE)
+write.csv(dat_hard, "chap3_hardw_plots_8April.csv", row.names = FALSE)
 
 
 
 
-# there are extreme outliers in twi, plot_cons_tree_BA, and plot_tree_BA that 
-# should be removed. for twi, these very wet plots are probably not the veg type
-# you're wanting to analyze. for others, outlier removal will help with model 
-# convergence
+# EXTRA CODE (MAY OR MAY NOT USE)
 
-dat <- read.csv("chap3_data_by_plot_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat <- dat %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
+# after you select plots, determine which species to include in analysis
+# based on the extent of their distributions across the provinces
+# first combine coastal fringe with coastal plain
+dat$province_3 <- ifelse(dat$province == "CoastalFringe", "CoastalPlain", dat$province)
 
-dat_culled <- read.csv("chap3_data_by_plot_pca_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
-dat_culled <- dat_culled %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
+# determine how many plots each species is located on, grouped by province
+species <- dat %>% select(Plot, species_name, province_3)
+species <- species %>% distinct()
+species_nplots <- species %>% group_by(species_name, province_3) %>% summarise(nplots = n())
 
-dat_hard <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_hard <- dat_hard %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
-
-dat_pine <- read.csv("chap3_pine_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_pine <- dat_pine %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
-
+# add column with number of provinces each species is found within
+species_nplots <- species_nplots %>% group_by(species_name) %>% mutate(n_prov = n())
+write.csv(species_nplots, "chap3_nplots_by_species-province.csv", row.names = FALSE)
 
 
