@@ -6,7 +6,7 @@ require(brms)
 require(future)
 require(mice)
 
-dat <- read.csv("chap3_hardw_plots_8April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
+dat <- read.csv("chap3_hardw_plots_USE_10April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
 dat <- dat %>% filter(species_name != "other")
 dat$plot_het_tree_BA <- with(dat, plot_tree_BA - plot_cons_tree_BA)
 
@@ -17,8 +17,13 @@ dat <- dat %>% filter(n_plots >= 100)
 
 # scale numeric data
 scaled_vars <- c("tmax", "mean_prec", "twi", "pc1", "pc2",
-                 "plot_het_tree_BA", "plot_cons_tree_BA")
+                 "plot_het_tree_BA")
 dat[, scaled_vars] <- scale(dat[, scaled_vars])
+
+# scale conspecific BA by species
+dat <- dat %>% group_by(species) %>% mutate(plot_cons_tree_BA = scale(plot_cons_tree_BA))
+dat <- dat %>% ungroup()
+
 
 # impute missing values using mice package
 # only select columns you're using in the model

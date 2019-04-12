@@ -3,10 +3,13 @@ require(dplyr)
 require(car)
 require(aspace)
 require(vegan)
+require(tidyr)
+require(aspace)
 
-plot<-read.csv("CVS_plots.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
-stem<-read.csv("CVS_stems.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
-soil<-read.csv("CVS_soils_avg.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+
+plot <- read.csv("CVS_plots.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+stem <- read.csv("CVS_stems.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+soil <- read.csv("CVS_soils_avg.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
 nvc <- read.csv("CVS_comm_classification.csv",stringsAsFactors = FALSE, na.strings=c("","NA"))
 VA <- read.csv("VA_CVS_plots_to_use.csv",stringsAsFactors = FALSE, na.strings=c("","NA"))
 
@@ -117,7 +120,7 @@ stem <- stem[stem$Diameter!=39.37,]
 
 # fix species names; lots of inconsistencies
 colnames(stem)[2] <- "SpeciesName"
-stem$SpeciesName <- recode(stem$SpeciesName,"'ACERRUB'='Acer rubrum'; 'Betula lenta var. lenta'='Betula lenta'; 'CARYCOR'='Carya cordiformis'; 'CARYGLA'='Carya glabra'; 'CARYOVT'='Carya ovata'; 'DIOSVIR'='Diospyros virginiana'; 'FAGUGRA'='Fagus grandifolia'; 'FRAXAME'='Fraxinus americana'; 'Fraxinus [americana + biltmoreana + smallii]'='Fraxinus americana'; 'Hamamelis virginiana var. virginiana'='Hamamelis virginiana'; 'ILEXAMB'='Ilex ambigua'; 'ILEXDEC'='Ilex decidua'; 'Ilex decidua var. decidua'='Ilex decidua'; 'ILEXOPAO'='Ilex opaca'; 'ILEXVER'='Ilex verticillata'; 'Ilex verticillata sp.'='Ilex verticillata'; 'JUNIVIR'='Juniperus virginiana'; 'LIQUSTY'='Liquidambar styraciflua'; 'LIRITUL'='Liriodendron tulipifera'; 'Magnolia virginiana var. virginiana'='Magnolia virginiana'; 'MORURUBR'='Morus rubra'; 'Morus rubra sp.'='Morus rubra'; 'NYSSSYL'='Nyssa sylvatica'; 'OXYDARB'='Oxydendrum arboreum'; 'PINUECH'='Pinus echinata'; 'PINUPAL'='Pinus palustris'; 'PINUTAE'='Pinus taeda'; 'PLATOCC'='Platanus occidentalis'; 'PRUNSER'='Prunus serotina'; 'Prunus serotina var. serotina'='Prunus serotina'; 'QUERFAL'='Quercus falcata'; 'QUERMRL'='Quercus marilandica'; 'QUERNIG'='Quercus nigra'; 'QUERPHE'='Quercus phellos'; 'QUERRUB'='Quercus rubra'; 'Quercus rubra var. rubra'='Quercus rubra'; 'QUERSTE'='Quercus stellata'; 'QUERVEL'='Quercus velutina'; 'SASSALB'='Sassafras albidum'; 'Acer negundo var. negundo'='Acer negundo'; 'Tilia americana var. heterophylla'='Tilia americana'; 'Tilia americana var. americana'='Tilia americana';'Tilia americana var. caroliniana'='Tilia americana';'ULMUALA'='Ulmus alata'; 'ULMURUB'='Ulmus rubra'; 'VACCARBA'='Vaccinium arboreum'; 'VACCCOR'='Vaccinium corymbosum'; 'Vaccinium corymbosum sp. #2'='Vaccinium corymbosum'; 'Liriodendron tulipifera var. tulipifera'='Liriodendron tulipifera'; 'Juniperus virginiana var. virginiana'='Juniperus virginiana'; 'Ilex opaca var. opaca'='Ilex opaca'; 'Fagus grandifolia var. caroliniana'='Fagus grandifolia'; 'Cercis canadensis var. canadensis'='Cercis canadensis'; 'Carpinus caroliniana var. caroliniana'='Carpinus caroliniana'; 'Acer rubrum var. rubrum'='Acer rubrum'; 'Toxicodendron radicans var. radicans'='Toxicodendron radicans'; 'Muscadinia rotundifolia var. rotundifolia'='Muscadinia rotundifolia'")
+stem$SpeciesName <- recode(stem$SpeciesName,"'ACERRUB'='Acer rubrum'; 'Betula lenta var. lenta'='Betula lenta'; 'CARYCOR'='Carya cordiformis'; 'CARYGLA'='Carya glabra'; 'CARYOVT'='Carya ovata'; 'DIOSVIR'='Diospyros virginiana'; 'FAGUGRA'='Fagus grandifolia'; 'FRAXAME'='Fraxinus americana'; 'Fraxinus [americana + biltmoreana + smallii]'='Fraxinus americana'; 'Hamamelis virginiana var. virginiana'='Hamamelis virginiana'; 'ILEXAMB'='Ilex ambigua'; 'ILEXDEC'='Ilex decidua'; 'Ilex decidua var. decidua'='Ilex decidua'; 'ILEXOPAO'='Ilex opaca'; 'ILEXVER'='Ilex verticillata'; 'Ilex verticillata sp.'='Ilex verticillata'; 'JUNIVIR'='Juniperus virginiana'; 'LIQUSTY'='Liquidambar styraciflua'; 'LIRITUL'='Liriodendron tulipifera'; 'Magnolia virginiana var. virginiana'='Magnolia virginiana'; 'MORURUBR'='Morus rubra'; 'Morus rubra sp.'='Morus rubra'; 'NYSSSYL'='Nyssa sylvatica'; 'OXYDARB'='Oxydendrum arboreum'; 'PINUECH'='Pinus echinata'; 'PINUPAL'='Pinus palustris'; 'PINUTAE'='Pinus taeda'; 'PLATOCC'='Platanus occidentalis'; 'PRUNSER'='Prunus serotina'; 'Prunus serotina var. serotina'='Prunus serotina'; 'QUERFAL'='Quercus falcata'; 'QUERMRL'='Quercus marilandica'; 'QUERNIG'='Quercus nigra'; 'QUERPHE'='Quercus phellos'; 'QUERRUB'='Quercus rubra'; 'Quercus rubra var. rubra'='Quercus rubra'; 'QUERSTE'='Quercus stellata'; 'QUERVEL'='Quercus velutina'; 'SASSALB'='Sassafras albidum'; 'Acer negundo var. negundo'='Acer negundo'; 'Tilia americana var. heterophylla'='Tilia americana'; 'Tilia americana var. americana'='Tilia americana';'Tilia americana var. caroliniana'='Tilia americana';'ULMUALA'='Ulmus alata'; 'ULMURUB'='Ulmus rubra'; 'VACCARBA'='Vaccinium arboreum'; 'VACCCOR'='Vaccinium corymbosum'; 'Vaccinium corymbosum sp. #2'='Vaccinium corymbosum'; 'Liriodendron tulipifera var. tulipifera'='Liriodendron tulipifera'; 'Juniperus virginiana var. virginiana'='Juniperus virginiana'; 'Ilex opaca var. opaca'='Ilex opaca'; 'Fagus grandifolia var. caroliniana'='Fagus grandifolia'; 'Cercis canadensis var. canadensis'='Cercis canadensis'; 'Carpinus caroliniana var. caroliniana'='Carpinus caroliniana'; 'Acer rubrum var. rubrum'='Acer rubrum'; 'Toxicodendron radicans var. radicans'='Toxicodendron radicans'; 'Muscadinia rotundifolia var. rotundifolia'='Muscadinia rotundifolia'; 'Prunus alleghaniensis var. alleghaniensis'='Prunus alleghaniensis'; 'Prunus umbellata var. umbellata'='Prunus umbellata';'Quercus marilandica var. marilandica'='Quercus marilandica';'Viburnum dentatum var. dentatum'='Viburnum dentatum';'Carpinus caroliniana ssp. caroliniana'='Carpinus caroliniana'")
 
 # table of species with plot count (this is the sampling unit)
 # RAN INTO PROBLEMS because there are plot/mod/sps/size duplicates.
@@ -138,7 +141,6 @@ prov <- left_join(stem[, c(1,2)], plot[, c(1,3,5)], by=c("Plot" = "plot"))
 # import USDA plants data to get growth habit info for each species;
 # only analyzing trees/shrubs
 # downloaded from website: https://plants.sc.egov.usda.gov/dl_all.html
-require(tidyr)
 species <- stem %>% distinct(SpeciesName)
 usda <- read.csv("USDA_plants_growth_habit.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
 keep <- left_join(species, usda[, c("Scientific.Name", "Growth.Habit", "Native.Status")], 
@@ -154,6 +156,10 @@ keep$habit <- with(keep, ifelse(
 )
 keep <- keep %>% filter(gh1 ==  "Tree" | gh1 == "Shrub")
 
+# remove vines and subshrubs
+keep <- keep %>% filter(gh2 != "Vine")
+keep <- keep %>% filter(gh2 != "Subshrub")
+
 # in a separate project, I manually extracted growth habits for certain species via USDA plants website;
 # add these to dataframe.
 
@@ -161,7 +167,7 @@ keep <- keep %>% filter(gh1 ==  "Tree" | gh1 == "Shrub")
 # remove species that aren't shrubs or trees (or that are nonnative)
 # categorize species as shrub, shrub-tree, or tree
 # (categorized based on USDA plants website "growth habit")
-remove <- c('Arundinaria gigantea','Arundinaria tecta', 'Berchemia scandens', 'Bignonia capreolata','Campsis radicans', 'Euonymus americanus', 'Gelsemium sempervirens', 'Ligustrum sinense','Lonicera japonica','Muscadinia rotundifolia','Parthenocissus quinquefolia','Smilax bona-nox [var. bona-nox + var. littoralis]','Smilax glauca','Smilax laurifolia','Smilax rotundifolia','Toxicodendron radicans', 'Vitis aestivalis', 'Vitis vulpina')
+remove <- c('Arundinaria gigantea','Arundinaria tecta', 'Berchemia scandens', 'Bignonia capreolata','Campsis radicans', 'Euonymus americanus', 'Gelsemium sempervirens', 'Ligustrum sinense','Lonicera japonica','Muscadinia rotundifolia','Parthenocissus quinquefolia','Smilax bona-nox [var. bona-nox + var. littoralis]','Smilax bona-nox','Smilax glauca','Smilax laurifolia','Smilax rotundifolia','Toxicodendron radicans', 'Vitis aestivalis', 'Vitis vulpina','Arundinaria appalachiana','Ditrysinia fruticosa','Erythrina herbacea','Hypericum fasciculatum','Hypericum myrtifolium','Hypericum suffruticosum','Ligustrum japonicum','Ligustrum lucidum','Melia azedarach','Nekemias arborea','Pieris phillyreifolia','Sabal minor','Serenoa repens','Smilax auriculata','Smilax smallii','Smilax walteri','Yucca aloifolia')
 shrubs <- c('Clethra alnifolia','Gaylussacia ursina','Hydrangea arborescens','Ilex glabra','Leucothoe fontanesiana','Lyonia lucida','Rhododendron [carolinianum + minus]','Rhododendron calendulaceum','Vaccinium corymbosum', 'Vaccinium formosum', 'Vaccinium fuscatum', 'Vaccinium stamineum', 'Viburnum rafinesqueanum')
 shrub.trees <- c('Acer pensylvanicum','Acer saccharum','Aesculus flava','Aesculus sylvatica','Alnus serrulata','Amelanchier arborea','Amelanchier laevis','Asimina triloba','Carpinus caroliniana','Celtis laevigata','Cercis canadensis','Chionanthus virginicus','Cyrilla racemiflora','Cornus florida','Fraxinus caroliniana','Hamamelis virginiana','Ilex coriacea','Ilex decidua','Ilex montana','Ilex opaca', 'Ilex verticillata', 'Ilex vomitoria','Kalmia latifolia','Lindera benzoin','Magnolia virginiana','Morella cerifera','Ostrya virginiana','Oxydendrum arboreum','Persea palustris','Prunus serotina', 'Quercus incana', 'Rhododendron catawbiense','Rhododendron maximum','Sassafras albidum','Symplocos tinctoria','Vaccinium arboreum','Viburnum prunifolium')
 trees <- c('Acer floridanum', 'Acer negundo', 'Acer rubrum','Betula alleghaniensis','Betula lenta','Betula nigra','Carya cordiformis','Carya glabra','Carya ovalis','Carya ovata','Carya tomentosa','Castanea dentata','Diospyros virginiana','Fagus grandifolia','Fraxinus americana','Fraxinus pennsylvanica','Halesia tetraptera','Juglans nigra','Juniperus virginiana','Liquidambar styraciflua','Liriodendron tulipifera','Magnolia acuminata','Magnolia fraseri','Morus rubra','Nyssa aquatica','Nyssa biflora','Nyssa sylvatica','Picea rubens','Pinus echinata','Pinus palustris', 'Pinus pungens', 'Pinus rigida','Pinus serotina','Pinus strobus','Pinus taeda','Pinus virginiana','Platanus occidentalis','Quercus alba','Quercus coccinea','Quercus falcata','Quercus laevis', 'Quercus lyrata', 'Quercus laurifolia', 'Quercus marilandica var. marilandica', 'Quercus michauxii','Quercus montana', 'Quercus muehlenbergii', 'Quercus nigra', 'Quercus pagoda', 'Quercus phellos','Quercus rubra','Quercus stellata','Quercus velutina', 'Quercus virginiana', 'Robinia pseudoacacia','Taxodium ascendens','Taxodium distichum','Tilia americana','Tsuga canadensis','Ulmus alata','Ulmus americana','Ulmus rubra')
@@ -170,8 +176,11 @@ names(keep_stems) <- "SpeciesName"
 keep_stems$SpeciesName <- as.character(keep_stems$SpeciesName)
 
 # combine new species vector with old species vector and remove duplicates
-all_keep_stems <- c(keep$SpeciesName, keep_stems$SpeciesName)  # 355
-all_keep_stems <- unique(all_keep_stems)  # 297
+all_keep_stems <- c(keep$SpeciesName, keep_stems$SpeciesName)
+all_keep_stems <- unique(all_keep_stems)  # 193
+
+# remove species in "remove" vector
+all_keep_stems <- all_keep_stems[!all_keep_stems %in% remove]  # 172
 
 # species in "all_keep_stems" vector will be analyzed as the response (sapling count); 
 # others will be kept to calculate BAs and counts, but won't be analyzed as response;
@@ -251,7 +260,7 @@ plot_size <- plot_size %>% select(-same)
 stem2 <- merge(stem, plot_size, by=c("Plot","Mod"), all.x=FALSE, all.y=TRUE)
 
 # merge soil with stem data
-dat <- merge(stem2, soil, by.x="Plot", by.y="plot", all.x=TRUE, all.y=FALSE)
+dat <- merge(stem2, soil, by="Plot", all.x=TRUE, all.y=FALSE)
 
 # merge dat with plot info
 # not keeping all 'dat' rows b/c before we filtered out plots for various reasons, and 
@@ -320,7 +329,6 @@ prop_cons <- dat2 %>% mutate(prop_cons = plot_cons_tree_BA / plot_tree_BA)
 # make slope/aspect conversions
 # 3 terms for 2 vars; allows model to fit this independently for each sps
 # slope/aspect need to be transformed to radians first 
-require(aspace)
 
 # convert to radians 
 dat2$slopeR <- as_radians(dat2$Slope)
@@ -350,15 +358,6 @@ species <- species %>% arrange(species)
 species$species_name <- as.character(species$species_name)
 which(duplicated(species$species))
 
-species$species_name <- with(species, ifelse(
-  species_name == "Acer rubrum var. drummondii", "Acer rubrum", ifelse(
-                species_name == "Juniperus virginiana var. silicicola", "Juniperus virginiana", ifelse(
-                  species_name == "Lyonia ligustrina var. foliosiflora", "Lyonia ligustrina", ifelse(
-                    species_name == "Lyonia ligustrina var. ligustrina", "Lyonia ligustrina", ifelse(
-                      species_name == "Quercus marilandica var. marilandica", "Quercus marilandica", 
-                      species_name))))))
-species <- species %>% distinct()
-
 species$species <- with(species, ifelse(
   species_name == "Carpinus caroliniana", "Cacr", ifelse(
     species_name == "Frangula caroliniana", "Frang_ca", ifelse(
@@ -385,15 +384,6 @@ species$species <- with(species, ifelse(
                                               species_name == "Tsuga caroliniana", "Tscaro",
                                               species))))))))))))))))))))))))
 
-# also change species names in main df so it matches the species dataframe
-dat3$species_name <- with(dat3, ifelse(
-  species_name == "Acer rubrum var. drummondii", "Acer rubrum", ifelse(
-    species_name == "Juniperus virginiana var. silicicola", "Juniperus virginiana", ifelse(
-      species_name == "Lyonia ligustrina var. foliosiflora", "Lyonia ligustrina", ifelse(
-        species_name == "Lyonia ligustrina var. ligustrina", "Lyonia ligustrina", ifelse(
-          species_name == "Quercus marilandica var. marilandica", "Quercus marilandica", 
-          species_name))))))
-
 # add back to main df
 dat4 <- left_join(dat3, species, by="species_name")
 
@@ -413,24 +403,7 @@ test <- test %>% filter(n==4)
 keep <- test$Plot   # Plots to keep
 dat5 <- dat4 %>% filter(Plot %in% keep)
 
-
-# ONLY RUN PCA CODE CHUNK BELOW IF YOU DO NOT END UP CULLING DATASET FURTHER
-# OTHEWISE, WAIT UNTIL CULLING IS COMPLETED BEFORE RUNNING SOIL PCA
-# running PCA on soil vars to get soil nutrient PCA axis for modeling
-# from column 10 (organic) through column 30 (density)
-require(vegan)
-soil <- dat5 %>% select(organic:density)
-soil <- soil[complete.cases(soil), ]
-pca <- rda(soil)
-#biplot(pca, display = c("sites", "species"), type = c("text", "points"))
-
-soil$comp1 <- pca$CA$u[,1]
-soil$comp2 <- pca$CA$u[,2]
-dat5$ID <- row.names(dat5)
-soil$ID <- row.names(soil)
-dat5 <- left_join(dat5, soil[,22:24], by = "ID")
-
-write.csv(dat5, "chap3_data_module.csv", row.names = FALSE)
+write.csv(dat5, "chap3_data_by_mod_10April.csv", row.names = FALSE)
 # this is the final df to use if you want the sampling unit to be each combination of 
 # plot/mod/species, where: 
 # sap_count = # sap stems of particular species within plot/mod
@@ -460,12 +433,12 @@ dat6 <- inner_join(dat6, mod_summ_tot_sap, by=c("Plot"))
 
 # add moisture index info (from Conghe Song)
 # TWI = total wetness index = slope/UAA (upslope accumulated area)
-moisture <- read.csv("twi_with_NAs.csv", stringsAsFactors = FALSE)
+moisture <- read.csv("twi_with_NAs.csv", stringsAsFactors = FALSE, na.strings="999999")
 moisture <- moisture %>% select(ID, twi)
 names(moisture) <- c("Plot", "twi")
 
 dat7 <- left_join(dat6, moisture, by = "Plot")
-write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
+write.csv(dat7, "chap3_data_by_plot_10April.csv", row.names = FALSE)
 
 # this is the final df to use if you want the sampling unit to be each combination of 
 # plot/species, where: 
@@ -473,13 +446,12 @@ write.csv(dat7, "chap3_data_by_plot.csv", row.names = FALSE)
 # tot_plot_sap_count = total # sap stems across plot
 # plot_cons_tree_BA = adult BA of conspecifics across plot
 # plot_tree_BA = total adult BA across plot
-
+# But still need to run PCA on soil vars if you want to use this df (un-culled) in analysis
 
 
 # need to cull dataset to remove inappropriate vegetation types from analysis
 # look at veg types in df
-dat <- dat7
-veg <- dat %>% select(Plot, commPrimaryCommon)
+veg <- dat7 %>% select(Plot, commPrimaryCommon)
 veg <- distinct(veg)
 veg <- veg %>% group_by(commPrimaryCommon) %>% summarise(n = n())
 veg <- veg %>% filter(!is.na(commPrimaryCommon))
@@ -496,14 +468,14 @@ veg <- veg %>% filter(!is.na(commPrimaryCommon))
 # remove tidal red cedar forest
 veg_substr <- "Fringe|Maritime|Marsh|Peat|Bog|Swamp|Pocosin|Loblolly|Pond-cypress|Sandhill Scrub|Successional|Sandhill|Hammock|Outcrop|Tidal|Bluff"
 veg_remove <- veg[grep(veg_substr, veg$commPrimaryCommon), ]
-dat_rem <- dat %>% filter(!commPrimaryCommon %in% veg_remove$commPrimaryCommon)
+dat_rem <- dat7 %>% filter(!commPrimaryCommon %in% veg_remove$commPrimaryCommon)
 
 # looks OK, but there are a lot of commPrimaryCommon cells with NA, altho they do have CEGLs
 # there are fewer NAs using commPrimaryScientific
 nas <- dat_rem[is.na(dat_rem$commPrimaryScientific),]
-nrow(nas[is.na(nas$commPrimaryCode),])
+nrow(nas[is.na(nas$commPrimaryCode),])  # 418 NAs
 
-# find veg community types for those that DO have CEGLs (257 of these)
+# find veg community types for those that DO have CEGLs
 # leave out the 1000 rows that do not have any veg type names/codes?
 nas_table <- as.data.frame(nas[!is.na(nas$commPrimaryCode), "commPrimaryCode"])
 names(nas_table) <- "commPrimaryCode"
@@ -554,11 +526,12 @@ hardw_plots <- veg2[!veg2$commPrimaryScientific %in% pine_plots$commPrimaryScien
 
 pine_dat <- dat_rem %>% filter(commPrimaryScientific %in% pine_plots$commPrimaryScientific)  # 3274 rows
 hardwood_dat <- dat_rem %>% filter(commPrimaryScientific %in% hardw_plots$commPrimaryScientific) # 16282 rows
-write.csv(pine_dat, "chap3_pine_plots.csv", row.names = FALSE)
-write.csv(hardwood_dat, "chap3_hardw_plots.csv", row.names = FALSE)
-write.csv(dat_rem, "chap3_data_by_plot_culled.csv", row.names = FALSE)
 
-
+# df UPDATE
+# pine_dat: culled, pine data
+# hardw_dat: culled, hardwood data
+# dat_rem: culled, all data
+# dat7: unculled, all data
 
 
 # there are extreme outliers in twi, plot_cons_tree_BA, and plot_tree_BA that 
@@ -566,37 +539,35 @@ write.csv(dat_rem, "chap3_data_by_plot_culled.csv", row.names = FALSE)
 # you're wanting to analyze. for others, outlier removal will help with model 
 # convergence
 
-dat <- read.csv("chap3_data_by_plot_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat <- dat %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
+dat8 <- dat7 %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
+                          sap_plot_count <= 130)
+write.csv(dat8, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
 
-dat_culled <- read.csv("chap3_data_by_plot_pca_culled.csv", stringsAsFactors = F, na.strings=c("","NA")) 
-dat_culled <- dat_culled %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
+dat_culled <- dat_rem %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
+                                   sap_plot_count <= 130)
+write.csv(dat_culled, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
 
-dat_hard <- read.csv("chap3_hardw_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_hard <- dat_hard %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
+dat_hard <- hardwood_dat %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
+                                   sap_plot_count <= 130)
+write.csv(dat_hard, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
 
-dat_pine <- read.csv("chap3_pine_plots_pca.csv", stringsAsFactors = F, na.strings=c("","NA"))
-dat_pine <- dat_pine %>% filter(twi<=1000 | plot_cons_tree_BA<=10000 | plot_tree_BA<=40000)
-write.csv(dat, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
+dat_pine <- pine_dat %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
+                                  sap_plot_count <= 130)
+write.csv(dat_pine, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
 
 
 
-# after culling df, re-run PCA on soil measurements
+# after culling df, run PCA on soil measurements
 # from column 10 (organic) through column 30 (density)
-require(vegan)
 
-# ONLY SELECT SOIL VARS YOU WANT TO USE AS FERTILITY PROXY
+# ONLY SELECT SOIL VARS THAT ARE RELIABLE MEASURES
 # ONLY USE UNIQUE VALUES (ONE SET OF MEASURES PER PLOT)
 # REMOVE NAS
 # SCALE MEASURES BEFORE RUNNING PCA - CHECK HISTOGRAMS TO MAKE SURE NORMAL
-# as of 8 April, dat10 is "chap3_data_by_plot_outl_rem.csv"
 
 # run PCA on hardwood data only; if you decide to include pine plots, you'll 
 # need to re-run PCA; use "chap3_hardw_plots_outl_rem.csv"
-soil_use <- dat %>% select(Plot, organic:Ca_Mg_ppm)
+soil_use <- dat8 %>% select(Plot, organic:Ca_Mg_ppm)
 soil_use <- soil_use %>% select(-N, -S, -P, -coarse)
 soil_use <- soil_use %>% distinct
 soil_use <- soil_use[complete.cases(soil_use), ]
@@ -674,7 +645,7 @@ soil_use[,"Ca_Mg_ppm"] <- ifelse(
 sapply(soil_use[,-1], hist)
 
 soil_scale <- as.data.frame(sapply(soil_use[,-1], scale))
-soil_scale <- as.data.frame(cbind(soil_use[,1], soil_scale))
+soil_scale <- as.data.frame(c(soil_use[,1], soil_scale))
 names(soil_scale)[1] <- "Plot"
 sapply(soil_scale[,-1], hist)
 
@@ -686,6 +657,7 @@ write.csv(soil_scale, "chap3_soil_hardw_scaled_outlier_rem.csv", row.names = FAL
 soil_scale <- soil_scale %>% select(-Plot)
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 pca <- rda(soil_scale)
+par(mfrow=c(1,1))
 biplot(pca, display = c("sites", "species"), type = c("text", "points"))
 
 soil_scale$pc1 <- pca$CA$u[,1]
@@ -696,9 +668,8 @@ soil_scale <- read.csv("chap3_soil_hardw_scaled_outlier_rem.csv", stringsAsFacto
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 soil_dat <- cbind(Plot = soil_scale[,1], soil_dat)
 
-dat_hard <- read.csv("chap3_hardw_plots_outl_rem.csv", stringsAsFactors = F, na.strings=c("","NA"))
 dat_hard <- left_join(dat_hard, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_hard, "chap3_hardw_plots_8April.csv", row.names = FALSE)
+write.csv(dat_hard, "chap3_hardw_plots_USE_10April.csv", row.names = FALSE)
 
 
 

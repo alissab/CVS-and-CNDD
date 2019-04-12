@@ -7,7 +7,7 @@ require(brms)
 require(future)
 require(mice)
 
-dat <- read.csv("chap3_hardw_plots_8April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
+dat <- read.csv("chap3_hardw_plots_USE_10April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
 dat <- dat %>% filter(species_name != "other")
 
 # remove infrequent species
