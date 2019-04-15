@@ -216,7 +216,7 @@ ggplot() +
 # PLOT RANDOM EFFECTS
 # species:con vs. species:het
 
-ran <- ranef(hardw_full_con_het)
+ran <- ranef(full_con_het)
 ran$species[,,1]  # extracts random intercept values for each species[1:3]
 ran$species[,,2]  # plot_het_tree_BA
 ran$species[,,3]  # plot_cons_tree_BA
@@ -224,7 +224,7 @@ ran$species[,,3]  # plot_cons_tree_BA
 # ran$species[species names, column estimates, random slope]
 ran$species[1:3, , ]  # extracts all random slopes for each species[1:3]
 
-require(sjstats)
+# require(sjstats)
 cons_betas <- as.data.frame(ran$species[,, 3])  # random slopes of conspBA for all species
 cons_betas$term <- row.names(cons_betas)
 
@@ -288,7 +288,7 @@ con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1, 1)) +
+  scale_y_continuous(name ="", limits = c(-0.9, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
@@ -305,9 +305,9 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
 
 # heterospecific random slope by species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1, 1)) +
+  scale_y_continuous(name ="", limits = c(-0.9, 0.6)) +
   scale_x_discrete(name ="") +
-  geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 1, color = "blue") + 
   geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
@@ -340,7 +340,7 @@ con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.75, 0.75)) +
+  scale_y_continuous(name ="", limits = c(-0.4, 0.4)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
@@ -357,9 +357,9 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
 
 # heterospecific random slope by species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.75, 0.75)) +
+  scale_y_continuous(name ="", limits = c(-0.4, 0.4)) +
   scale_x_discrete(name ="") +
-  geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 1, color = "blue") + 
   geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
@@ -488,7 +488,7 @@ con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1.8, 1.5)) +
+  scale_y_continuous(name ="", limits = c(-0.8, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
@@ -505,9 +505,9 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
 
 # heterospecific random slope by species
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1.8, 1.5)) +
+  scale_y_continuous(name ="", limits = c(-0.8, 0.6)) +
   scale_x_discrete(name ="") +
-  geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 1, color = "blue") + 
   geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
@@ -527,8 +527,8 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
 # PLOTTING FIXED EFFECTS
 
 # plot posterior distributions
-require(bayesplot)
-post <- as.array(mod)
+# require(bayesplot)
+post <- as.array(full_con_het)
 color_scheme_set("gray")
 post.plot <- mcmc_areas(post, pars = c("b_plot_cons_tree_BA", "b_plot_het_tree_BA"), 
                         prob = 0.8, prob_outer = 0.95, point_est = "mean")
@@ -567,6 +567,60 @@ post.plot <- mcmc_areas(post, pars = c("b_pc1:plot_cons_tree_BA", "b_pc1:plot_he
 post.plot + 
   geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
   coord_cartesian(ylim = c(1.5, 2.5)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=20),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(rep(0.5, 4), "cm"))
+
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_pc2:plot_cons_tree_BA", "b_pc2:plot_het_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+
+post.plot + 
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
+  coord_cartesian(ylim = c(1.5, 2.5)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=20),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(rep(0.5, 4), "cm"))
+
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_tmax:plot_cons_tree_BA", "b_tmax:plot_het_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+
+post.plot + 
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
+  coord_cartesian(ylim = c(1.5, 2.5)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=20),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(rep(0.5, 4), "cm"))
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_mean_prec:plot_cons_tree_BA", "b_mean_prec:plot_het_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+
+post.plot + 
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
+  coord_cartesian(ylim = c(1.5, 2.5)) +
+  scale_x_continuous(limits=c(-0.15, 0.1)) +#, breaks=seq(-0.15, 0.15, 0.05)) +
   theme_classic() + 
   theme(
     axis.text.x = element_text(size=20),
@@ -716,3 +770,42 @@ p.h <- ggplot(data = dat, aes(x = plot_het_tree_BA, y = sap_plot_count)) +
         plot.margin = unit(c(5,5,5,5), "mm"))
 
 ggMarginal(p.h, type = "histogram")
+
+
+
+
+
+# REPORTING QUANTITATIVE RESULTS
+require(tidyr)
+require(brms)
+post <- as.array(full_con_het)  # array: [# iterations, # chains, # parameters]
+
+# gather all iterations across all chains together into one column for each 
+# predictor of interest, which gives you its posterior distribution
+
+sap <- data.frame(post[, , "b_Intercept"])
+sap <- c(t(sap))  # if you want a vector of all the pulls from the posterior
+mcmc_areas(post, pars = "b_Intercept", prob = 0.8, prob_outer = 0.95, point_est = "mean")
+pnbinom(q = 1.5, size = 0.55, mu = mean(sap))  # probabilities you want to report
+# q = quantile you're interested in; size = shape parameter; mu = mean of posterior
+
+cons <- data.frame(post[, , "b_plot_cons_tree_BA"])
+cons <- c(t(cons))
+mcmc_areas(post, pars = "b_plot_cons_tree_BA", prob = 0.8, prob_outer = 0.95, point_est = "mean")
+pnorm(q = 0.1, mean = mean(cons), sd = sd(cons))
+# mean = mean of posterior, sd = sd of posterior
+# 90% probability that cons BA is at or below 0.1
+
+twi_BA <- data.frame(post[,,"b_twi:plot_cons_tree_BA"])
+twi_BA <- c(t(twi_BA))
+mcmc_areas(post, pars = "b_twi:plot_cons_tree_BA", prob = 0.8, prob_outer = 0.95, point_est = "mean")
+qnorm(p = 0.025, mean = mean(twi_BA), sd = sd(twi_BA))
+# 95% lower quartile: 0.049464
+
+twi_het <- data.frame(post[,,"b_twi:plot_het_tree_BA"])
+twi_het <- c(t(twi_het))
+mcmc_areas(post, pars = "b_twi:plot_het_tree_BA", prob = 0.8, prob_outer = 0.95, point_est = "mean")
+pnorm(q = 0.049464, mean = mean(twi_het), sd = sd(twi_het))
+# there is a 61.8% chance that TWI:het_tree_BA is equal to or less than 
+# the lower 95% quartile of TWI:cons_tree_BA
+
