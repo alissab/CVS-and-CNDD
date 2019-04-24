@@ -6,14 +6,16 @@ require(brms)
 require(future)
 require(mice)
 
-dat <- read.csv("chap3_hardw_plots_USE_10April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
+dat <- read.csv("chap3_all_plots_USE_22April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"), fileEncoding="latin1")
 dat <- dat %>% filter(species_name != "other")
 dat$plot_het_tree_BA <- with(dat, plot_tree_BA - plot_cons_tree_BA)
 
 # remove infrequent species
 species_num <- dat %>% group_by(species) %>% summarise(n_plots = n())
 dat <- left_join(dat, species_num, by="species")
-dat <- dat %>% filter(n_plots >= 100)
+dat <- dat %>% filter(n_plots >= 50)
+
+dat <- dat[!is.na(dat$plot_tree_BA),]
 
 # scale numeric data
 scaled_vars <- c("tmax", "mean_prec", "twi", "pc1", "pc2",
@@ -24,12 +26,10 @@ dat[, scaled_vars] <- scale(dat[, scaled_vars])
 dat <- dat %>% group_by(species) %>% mutate(plot_cons_tree_BA = scale(plot_cons_tree_BA))
 dat <- dat %>% ungroup()
 
-
 # impute missing values using mice package
-# only select columns you're using in the model
-# dat_imp <- dat %>% select(species, sap_plot_count, plot_het_tree_BA, plot_cons_tree_BA,
-#                           tmax, mean_prec, twi, pc1, pc2)
-# dat_imp <- mice(dat_imp, m = 5, print = FALSE)
+dat_imp <- dat %>% select(species, sap_plot_count, plot_het_tree_BA, plot_cons_tree_BA,
+                          tmax, mean_prec, twi, pc1, pc2)
+dat_imp <- mice(dat_imp, m = 5, print = FALSE)
 
 # weakly informative priors
 prior <- c(set_prior("normal(0, 1)", class = "b", coef= "tmax"),
@@ -69,7 +69,7 @@ prior <- c(set_prior("normal(0, 1)", class = "b", coef= "tmax"),
 )
 
 plan(cluster)
-mod <- brm( sap_plot_count ~
+mod <- brm_multiple( sap_plot_count ~
               tmax + mean_prec + twi + pc1 + pc2 +                         # pop'n-level main effects
               plot_het_tree_BA + plot_cons_tree_BA +
               
@@ -95,12 +95,12 @@ mod <- brm( sap_plot_count ~
             # warmup = 1000,
             # iter = 2000,
             # chains = 4,
-            data = dat
+            data = dat_imp
 )
 
-save.image("chap3_hardw_full_con_het.RData")
+save.image("chap3_full_con_het.RData")
 
 # leave-one-out analysis for model comparison
 # for certain models, need to use k-fold if LOO doesn't work
 loo6 <- kfold(mod, K = 10)
-save.image("chap3_hardw_full_con_het.RData")
+save.image("chap3_full_con_het.RData")

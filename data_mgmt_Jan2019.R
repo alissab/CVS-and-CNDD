@@ -645,32 +645,32 @@ soil_use[,"Ca_Mg_ppm"] <- ifelse(
 sapply(soil_use[,-1], hist)
 
 soil_scale <- as.data.frame(sapply(soil_use[,-1], scale))
-soil_scale <- as.data.frame(c(soil_use[,1], soil_scale))
+soil_scale <- cbind(soil_use[,1], soil_scale)
 names(soil_scale)[1] <- "Plot"
 sapply(soil_scale[,-1], hist)
 
 # looks good, save scaled, outlier-removed soil data
 write.csv(soil_scale, "chap3_soil_hardw_scaled_outlier_rem.csv", row.names = FALSE)
-
+#write.csv(soil_scale, "chap3_soil_all_plots_scaled_outlier_rem.csv", row.names = FALSE)
 
 # perform PCA
 soil_scale <- soil_scale %>% select(-Plot)
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 pca <- rda(soil_scale)
-par(mfrow=c(1,1))
+par(mfrow=c(1,1), mar=rep(4,4))
 biplot(pca, display = c("sites", "species"), type = c("text", "points"))
 
 soil_scale$pc1 <- pca$CA$u[,1]
 soil_scale$pc2 <- pca$CA$u[,2]
 soil_dat <- soil_scale
 
-soil_scale <- read.csv("chap3_soil_hardw_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
+soil_scale <- read.csv("chap3_soil_all_plots_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
 soil_scale <- soil_scale[complete.cases(soil_scale),]
 soil_dat <- cbind(Plot = soil_scale[,1], soil_dat)
 
 dat_hard <- left_join(dat_hard, soil_dat[ ,c(1, 27, 28)], by = "Plot")
 write.csv(dat_hard, "chap3_hardw_plots_USE_10April.csv", row.names = FALSE)
-
+# write.csv(dat, "chap3_all_plots_USE_22April.csv", row.names = FALSE)
 
 
 
