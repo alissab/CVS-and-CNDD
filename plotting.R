@@ -244,14 +244,14 @@ ggplot(cons_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red") +
   ggtitle("Effect of conspecific basal area\n ") +
   theme_classic() + 
   theme(
     plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.y = element_text(size = 12))
 
 
 
@@ -261,7 +261,7 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.5) +
   ggtitle("Effect of heterospecific basal area\n ") +
   theme_classic() + 
   
@@ -269,7 +269,7 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
     plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.y = element_text(size = 12))
 
 
 
@@ -524,6 +524,56 @@ ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
 
 
 
+# new model testing effects of elevation
+
+# CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
+# Elevation is random effect 12, 13 (het, con, respectively)
+cons_betas <- as.data.frame(ran$species[,, 5])
+cons_betas$term <- row.names(cons_betas)
+het_betas <- as.data.frame(ran$species[,, 4])
+het_betas$term <- row.names(het_betas)
+
+# combine conspecific with heteros estimates into one df
+names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
+names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
+con_het_betas <- full_join(cons_betas, het_betas, by="term")
+
+# conspecific random slope for each species
+ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
+  scale_y_continuous(name ="", limits = c(-0.8, 1)) +
+  scale_x_discrete(name ="") +
+  geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  coord_flip() +
+  geom_point(size = 4, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
+  ggtitle("Effect of interaction between \nconspecific basal area and elevation") +
+  theme_classic() + 
+  theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 14))
+
+
+# heterospecific random slope by species
+ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
+  scale_y_continuous(name ="", limits = c(-0.8, 1)) +
+  scale_x_discrete(name ="") +
+  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  coord_flip() +
+  geom_point(size = 4, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
+  ggtitle("Effect of interaction between \nheterospecific basal area and elevation") +
+  theme_classic() + 
+  
+  theme(
+    plot.title = element_text(hjust = 0.5, color = "blue"),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 14))
+
+
+
 # PLOTTING FIXED EFFECTS
 
 # plot posterior distributions
@@ -628,6 +678,22 @@ post.plot +
     axis.ticks.y = element_blank(),
     axis.text.y = element_blank(),
     plot.margin = unit(rep(0.5, 4), "cm"))
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_Elevation:plot_cons_tree_BA", "b_Elevation:plot_het_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+
+post.plot + 
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
+  scale_x_continuous(limits = c(-0.8, 1)) +
+  coord_cartesian(ylim = c(1.5, 2.1)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=20),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
 
 
 

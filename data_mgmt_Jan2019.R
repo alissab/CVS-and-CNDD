@@ -4,7 +4,6 @@ require(car)
 require(aspace)
 require(vegan)
 require(tidyr)
-require(aspace)
 
 
 plot <- read.csv("CVS_plots.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
@@ -413,6 +412,12 @@ write.csv(dat5, "chap3_data_by_mod_10April.csv", row.names = FALSE)
 # plot_cons_tree_BA = adult BA of conspecifics across plot
 
 
+
+
+
+
+
+# PART TWO: PLOT AS SAMPLING UNIT
 # create another df that combines all modules, so sampling unit becomes every combination
 # of plot/species (suggested by committee in Feb 2019)
 
@@ -446,8 +451,6 @@ write.csv(dat7, "chap3_data_by_plot_10April.csv", row.names = FALSE)
 # tot_plot_sap_count = total # sap stems across plot
 # plot_cons_tree_BA = adult BA of conspecifics across plot
 # plot_tree_BA = total adult BA across plot
-# But still need to run PCA on soil vars if you want to use this df (un-culled) in analysis
-
 
 # need to cull dataset to remove inappropriate vegetation types from analysis
 # look at veg types in df
@@ -533,49 +536,24 @@ hardwood_dat <- dat_rem %>% filter(commPrimaryScientific %in% hardw_plots$commPr
 # dat_rem: culled, all data
 # dat7: unculled, all data
 
-
-# there are extreme outliers in twi, plot_cons_tree_BA, and plot_tree_BA that 
-# should be removed. for twi, these very wet plots are probably not the veg type
-# you're wanting to analyze. for others, outlier removal will help with model 
-# convergence
-
-dat8 <- dat7 %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
-                          sap_plot_count <= 130)
-write.csv(dat8, "chap3_data_by_plot_outl_rem.csv", row.names = FALSE)
-
-dat_culled <- dat_rem %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
-                                   sap_plot_count <= 130)
-write.csv(dat_culled, "chap3_data_by_plot_culled_outl_rem.csv", row.names = FALSE)
-
-dat_hard <- hardwood_dat %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
-                                   sap_plot_count <= 130)
-write.csv(dat_hard, "chap3_hardw_plots_outl_rem.csv", row.names = FALSE)
-
-dat_pine <- pine_dat %>% filter(twi<=1500 & plot_cons_tree_BA<=16000 & plot_tree_BA<=60000 & 
-                                  sap_plot_count <= 130)
-write.csv(dat_pine, "chap3_pine_plots_outl_rem.csv", row.names = FALSE)
-
-
-
-# after culling df, run PCA on soil measurements
-# from column 10 (organic) through column 30 (density)
-
-# ONLY SELECT SOIL VARS THAT ARE RELIABLE MEASURES
+# run PCA on soil measurements
+# ONLY SELECT SOIL VARS THAT ARE RELIABLE MEASURES AND AREN'T REDUNDANT
 # ONLY USE UNIQUE VALUES (ONE SET OF MEASURES PER PLOT)
 # REMOVE NAS
-# SCALE MEASURES BEFORE RUNNING PCA - CHECK HISTOGRAMS TO MAKE SURE NORMAL
+# (LOG-TRANSFORM IF NEEDED) AND SCALE MEASURES BEFORE RUNNING PCA
+# run PCA on all plots (dat_rem)
 
-# run PCA on hardwood data only; if you decide to include pine plots, you'll 
-# need to re-run PCA; use "chap3_hardw_plots_outl_rem.csv"
-soil_use <- dat8 %>% select(Plot, organic:Ca_Mg_ppm)
-soil_use <- soil_use %>% select(-N, -S, -P, -coarse)
+soil_measures <- c('Plot', 'organic', 'sand', 'silt', 'clay', 'ph', 'exchCap', 'baseSat', 
+                   'Ca_ppm', 'Mg_ppm', 'K_ppm', 'Na_ppm', 'B_ppm', 'Fe_ppm', 
+                   'Mn_ppm', 'Cu_ppm', 'Zn_ppm', 'Al_ppm', 'Ca_Mg_ppm', 'density')
+soil_use <- dat_rem %>% select(soil_measures)
 soil_use <- soil_use %>% distinct
 soil_use <- soil_use[complete.cases(soil_use), ]
 soil_use[,-1] <- sapply(soil_use[,-1], as.numeric)
 
-par(mfrow=c(6, 5))
+par(mfrow=c(5, 4))
 par(mar=rep(0.5, 4))
-sapply(soil_use[, -1], hist)  # look for data shape
+sapply(soil_use[, -1], hist)  # look for outliers
 
 # remove outliers
 out_organic <- boxplot(soil_use$organic, plot=FALSE)$out
@@ -606,10 +584,6 @@ out_B_ppm <- boxplot(soil_use$B_ppm, plot=FALSE)$out
 soil_use[,"B_ppm"] <- ifelse(
   soil_use$B_ppm %in% out_B_ppm, NA, soil_use$B_ppm)
 
-out_Fe_ppm <- boxplot(soil_use$Fe_ppm, plot=FALSE)$out
-soil_use[,"Fe_ppm"] <- ifelse(
-  soil_use$Fe_ppm %in% out_Fe_ppm, NA, soil_use$Fe_ppm)
-
 out_Mn_ppm <- boxplot(soil_use$Mn_ppm, plot=FALSE)$out
 soil_use[,"Mn_ppm"] <- ifelse(
   soil_use$Mn_ppm %in% out_Mn_ppm, NA, soil_use$Mn_ppm)
@@ -622,72 +596,86 @@ out_Zn_ppm <- boxplot(soil_use$Zn_ppm, plot=FALSE)$out
 soil_use[,"Zn_ppm"] <- ifelse(
   soil_use$Zn_ppm %in% out_Zn_ppm, NA, soil_use$Zn_ppm)
 
-out_Mg_pct <- boxplot(soil_use$Mg_pct, plot=FALSE)$out
-soil_use[,"Mg_pct"] <- ifelse(
-  soil_use$Mg_pct %in% out_Mg_pct, NA, soil_use$Mg_pct)
-
-out_K_pct <- boxplot(soil_use$K_pct, plot=FALSE)$out
-soil_use[,"K_pct"] <- ifelse(
-  soil_use$K_pct %in% out_K_pct, NA, soil_use$K_pct)
-
-out_Na_pct <- boxplot(soil_use$Na_pct, plot=FALSE)$out
-soil_use[,"Na_pct"] <- ifelse(
-  soil_use$Na_pct %in% out_Na_pct, NA, soil_use$Na_pct)
-
-out_Other_pct <- boxplot(soil_use$Other_pct, plot=FALSE)$out
-soil_use[,"Other_pct"] <- ifelse(
-  soil_use$Other_pct %in% out_Other_pct, NA, soil_use$Other_pct)
-
 out_Ca_Mg_ppm <- boxplot(soil_use$Ca_Mg_ppm, plot=FALSE)$out
 soil_use[,"Ca_Mg_ppm"] <- ifelse(
   soil_use$Ca_Mg_ppm %in% out_Ca_Mg_ppm, NA, soil_use$Ca_Mg_ppm)
 
+soil_use <- soil_use[complete.cases(soil_use), ]
+
+# check data shape - needs to be normal
+dev.off()
+par(mfrow=c(5, 4))
+par(mar=rep(0.5, 4))
 sapply(soil_use[,-1], hist)
 
-soil_scale <- as.data.frame(sapply(soil_use[,-1], scale))
-soil_scale <- cbind(soil_use[,1], soil_scale)
-names(soil_scale)[1] <- "Plot"
-sapply(soil_scale[,-1], hist)
+# log transform skewed measures
+to_log <- c('organic', 'clay', 'exchCap', 'baseSat', 'Ca_ppm', 
+            'Mg_ppm', 'K_ppm', 'Na_ppm', 'Mn_ppm', 'Cu_ppm', 
+            'Zn_ppm', 'density')
+foo <- which(names(soil_use) %in% to_log)
 
-# looks good, save scaled, outlier-removed soil data
-write.csv(soil_scale, "chap3_soil_hardw_scaled_outlier_rem.csv", row.names = FALSE)
-#write.csv(soil_scale, "chap3_soil_all_plots_scaled_outlier_rem.csv", row.names = FALSE)
+soil_use[,-1] <- soil_use[,-1] + 1
+soil_use[,foo] <- sapply(soil_use[,foo], log)
+
+dev.off()
+par(mfrow=c(5, 4))
+par(mar=rep(0.5, 4))
+sapply(soil_use[,-1], hist)
+
+# scale all soil measures
+soil_use[,-1] <- as.data.frame(sapply(soil_use[,-1], scale))
+
+dev.off()
+par(mfrow=c(5, 4))
+par(mar=rep(0.5, 4))
+sapply(soil_use[,-1], hist) # looks good
+
+# save scaled, outlier-removed soil data
+write.csv(soil_use, "chap3_soil_all_plots_scaled_outlier_rem.csv", row.names = FALSE)
 
 # perform PCA
-soil_scale <- soil_scale %>% select(-Plot)
-soil_scale <- soil_scale[complete.cases(soil_scale),]
-pca <- rda(soil_scale)
+soil_use <- soil_use %>% ungroup()
+soil_pca <- soil_use %>% select(-Plot)
+pca <- rda(soil_pca)
 par(mfrow=c(1,1), mar=rep(4,4))
 biplot(pca, display = c("sites", "species"), type = c("text", "points"))
 
-soil_scale$pc1 <- pca$CA$u[,1]
-soil_scale$pc2 <- pca$CA$u[,2]
-soil_dat <- soil_scale
+soil_pca$pc1 <- pca$CA$u[,1]
+soil_pca$pc2 <- pca$CA$u[,2]
 
-soil_scale <- read.csv("chap3_soil_all_plots_scaled_outlier_rem.csv", stringsAsFactors = FALSE)
-soil_scale <- soil_scale[complete.cases(soil_scale),]
-soil_dat <- cbind(Plot = soil_scale[,1], soil_dat)
+# soil_pca contains soil measures, pca axes
+# soil_use contains Plot, soil measures
 
-dat_hard <- left_join(dat_hard, soil_dat[ ,c(1, 27, 28)], by = "Plot")
-write.csv(dat_hard, "chap3_hardw_plots_USE_10April.csv", row.names = FALSE)
-# write.csv(dat, "chap3_all_plots_USE_22April.csv", row.names = FALSE)
+soil_dat <- cbind(Plot = soil_use[,1], soil_pca)
 
+all_dat <- left_join(dat_rem, soil_dat[ ,c(1, 21, 22)], by = "Plot")
+write.csv(all_dat, "chap3_all_plots_23May.csv", row.names = FALSE)
 
 
-# EXTRA CODE (MAY OR MAY NOT USE)
 
-# after you select plots, determine which species to include in analysis
-# based on the extent of their distributions across the provinces
-# first combine coastal fringe with coastal plain
-dat$province_3 <- ifelse(dat$province == "CoastalFringe", "CoastalPlain", dat$province)
 
-# determine how many plots each species is located on, grouped by province
-species <- dat %>% select(Plot, species_name, province_3)
-species <- species %>% distinct()
-species_nplots <- species %>% group_by(species_name, province_3) %>% summarise(nplots = n())
 
-# add column with number of provinces each species is found within
-species_nplots <- species_nplots %>% group_by(species_name) %>% mutate(n_prov = n())
-write.csv(species_nplots, "chap3_nplots_by_species-province.csv", row.names = FALSE)
 
+# PART THREE
+# IF YOU WANT TO USE MODULE AS SAMPLING UNIT
+# need dat5 (mod-specific data), dat_rem (contains only plots to keep based on 
+# culling by veg community type), soil_dat (PCA axes for each plot)
+
+# found small issue - when changing carya ovalis to carya glabra, didn't sum
+# those rows together (needed for sap_count, tree_BA, and plot_cons_tree_BA)
+# these need to stay the same, DON'T SUM THEM = plot_tree_BA, tot_mod_sap_count
+mod_dat <- dat5 %>% group_by(Plot, Mod, species) %>% 
+  mutate(sap_count2 = sum(sap_count), 
+            tree_BA2 = sum(tree_BA), 
+            plot_cons_tree_BA2 = sum(plot_cons_tree_BA))
+mod_dat <- mod_dat %>% select(-sap_count, -tree_BA, -plot_cons_tree_BA)
+colnames(mod_dat)[78:80] <- c("sap_count", "tree_BA", "plot_cons_tree_BA")
+
+# remove plots from mod_dat that were culled out of plot-wide dataframe
+mod_dat <- mod_dat[mod_dat$Plot %in% dat_rem$Plot, ]
+
+# add soil PCA axes to mod_dat
+mod_dat <- left_join(mod_dat, soil_dat[, c("Plot", "pc1", "pc2")], by = "Plot")
+
+write.csv(mod_dat, "chap3_all_mods_23May.csv", row.names = FALSE)
 
