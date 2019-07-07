@@ -532,7 +532,7 @@ hardwood_dat <- dat_rem %>% filter(commPrimaryScientific %in% hardw_plots$commPr
 
 # df UPDATE
 # pine_dat: culled, pine data
-# hardw_dat: culled, hardwood data
+# hardwood_dat: culled, hardwood data
 # dat_rem: culled, all data
 # dat7: unculled, all data
 
@@ -546,7 +546,7 @@ hardwood_dat <- dat_rem %>% filter(commPrimaryScientific %in% hardw_plots$commPr
 soil_measures <- c('Plot', 'organic', 'sand', 'silt', 'clay', 'ph', 'exchCap', 'baseSat', 
                    'Ca_ppm', 'Mg_ppm', 'K_ppm', 'Na_ppm', 'B_ppm', 'Fe_ppm', 
                    'Mn_ppm', 'Cu_ppm', 'Zn_ppm', 'Al_ppm', 'Ca_Mg_ppm', 'density')
-soil_use <- dat_rem %>% select(soil_measures)
+soil_use <- hardwood_dat %>% select(soil_measures)
 soil_use <- soil_use %>% distinct
 soil_use <- soil_use[complete.cases(soil_use), ]
 soil_use[,-1] <- sapply(soil_use[,-1], as.numeric)
@@ -631,7 +631,7 @@ par(mar=rep(0.5, 4))
 sapply(soil_use[,-1], hist) # looks good
 
 # save scaled, outlier-removed soil data
-write.csv(soil_use, "chap3_soil_all_plots_scaled_outlier_rem.csv", row.names = FALSE)
+write.csv(soil_use, "chap3_soil_hardw_plots_scaled_outlier_rem.csv", row.names = FALSE)
 
 # perform PCA
 soil_use <- soil_use %>% ungroup()
@@ -648,8 +648,8 @@ soil_pca$pc2 <- pca$CA$u[,2]
 
 soil_dat <- cbind(Plot = soil_use[,1], soil_pca)
 
-all_dat <- left_join(dat_rem, soil_dat[ ,c(1, 21, 22)], by = "Plot")
-write.csv(all_dat, "chap3_all_plots_23May.csv", row.names = FALSE)
+all_dat <- left_join(hardwood_dat, soil_dat[ ,c(1, 21, 22)], by = "Plot")
+write.csv(all_dat, "chap3_hardw_plots_29May.csv", row.names = FALSE)
 
 
 

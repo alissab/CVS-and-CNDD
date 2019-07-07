@@ -3,15 +3,16 @@ require(rgdal)
 require(maps)
 require(dplyr)
 require(ggplot2)
-require(ggExtra)  # for marginal histograms
 require(ggmap)
+
+require(ggExtra)  # for marginal histograms
 require(sjPlot)
 require(sjstats)
 require(gridExtra)
 require(bayesplot)
 
 
-dat <- read.csv("chap3_hardw_plots_USE_10April.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+dat <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
 
 # MAPPING
 # convert UTMs to lat/longs
@@ -48,7 +49,7 @@ map(database="state", regions=c("north carolina", "south carolina"))
 points(dat16ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 points(dat17ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
 points(dat18ll, pch=21, cex=2, col="black", bg=rgb(red=0, green=1, blue=0, alpha=0.3))
-title(main = "CVS mixed hardwood plot locations, n = 1093 \n \n")
+title(main = "CVS mixed hardwood plot locations, n = 1113 \n \n")
 
 
 # trying to get base topographic map (elevation) with plot locations
@@ -78,14 +79,15 @@ par(mar = rep(0.5, 4))
 basemap <- map_data(database="state", regions=c("north carolina", "south carolina"))
 
 
-
+png("PC1_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
   geom_point(data = subset(plots, !is.na(pc1)), mapping = aes(x = x, y = y, color = pc1), 
-             alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 0.025, low="red", mid="white",
-                        high="blue", name="Soil PCA\nAxis 1") +
+             alpha = 0.5, size = 4) + 
+  scale_color_gradient(low="lightblue", high="darkblue", name="Soil fertility\n") +
+  # geom_point(data = subset(plots, !is.na(pc1)), mapping = aes(x = x, y = y), 
+  #            alpha = 0.8, size = 4, pch = 21, color = "black") + 
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -93,16 +95,20 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        plot.margin = unit(rep(0,4), "cm"),
+        legend.text = element_text(size = 10))
+dev.off()
 
 
+png("PC2_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
   geom_point(data = subset(plots, !is.na(pc2)), mapping = aes(x = x, y = y, color = pc2), 
-             alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 0, low="red", mid="white",
-                        high="blue", name="Soil PCA\nAxis 2") +
+             alpha = 0.5, size = 4) + 
+  scale_color_gradient(low="lightblue", high="darkblue", name="Soil \ncoarseness\n") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -110,20 +116,20 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 10),
+        plot.margin = unit(rep(0,4), "cm"))
+dev.off()
 
 
-# modify twi value to help with map interpretation
-plots$twi_plot <- with(plots, ifelse(
-  twi>=300, 300, twi))
-
+png("Elevation_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plots, mapping = aes(x = x, y = y, color = twi_plot), 
+  geom_point(data = subset(plots, !is.na(Elevation)), mapping = aes(x = x, y = y, color = Elevation), 
              alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 130, low="red", mid="white",
-                        high="blue", name="Total wetness\nindex") +
+  scale_color_gradient(low="lightblue", high="darkblue", name="Elevation\n") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -131,16 +137,20 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        plot.margin = unit(rep(0,4), "cm"),
+        legend.text = element_text(size = 10))
+dev.off()
 
 
+png("top1_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plots, mapping = aes(x = x, y = y, color = mean_prec), 
+  geom_point(data = subset(plots, !is.na(top1)), mapping = aes(x = x, y = y, color = top1), 
              alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 5, low="red", mid="white",
-                        high="blue", name="Mean annual\nprecipitation") +
+  scale_color_gradient(low="lightblue", high="darkblue", name="Slope\nsteepness\n") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -148,16 +158,22 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        plot.margin = unit(rep(0,4), "cm"),
+        legend.text = element_text(size = 10))
+dev.off()
 
 
+
+
+png("top2_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plots, mapping = aes(x = x, y = y, color = tmax), 
+  geom_point(data = subset(plots, !is.na(top2)), mapping = aes(x = x, y = y, color = top2), 
              alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 33, low="blue", mid="white",
-                        high="red", name="Annual maximum\ntemperature") +
+  scale_color_gradient(low="lightblue", high="darkblue", name="East-West\naspect\n") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -165,20 +181,22 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        plot.margin = unit(rep(0,4), "cm"),
+        legend.text = element_text(size = 10))
+dev.off()
 
 
-# make cons BA easier to interpret
-plots$cons_plot <- with(plots, ifelse(
-  plot_cons_tree_BA>=5000, 5000, plot_cons_tree_BA))
 
+
+png("top3_mapped.png", width = 7, height = 3.5, units = "in", res = 300)
 ggplot() + 
   geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
                fill = NA, color = "black") + 
-  geom_point(data = plots, mapping = aes(x = x, y = y, color = cons_plot), 
+  geom_point(data = subset(plots, !is.na(top3)), mapping = aes(x = x, y = y, color = top3), 
              alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 2000, low="blue", mid="white",
-                        high="red", name="Conspecific\nbasal area") +
+  scale_color_gradient(low="lightblue", high="darkblue", name="North-South\naspect\n") +
   coord_fixed(1.15) +
   theme_classic() + 
   theme(axis.line = element_blank(),
@@ -186,28 +204,13 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.title = element_text(size = 14),
+        plot.margin = unit(rep(0,4), "cm"),
+        legend.text = element_text(size = 10))
+dev.off()
 
 
-# help with map interpretation
-plots$BA_plot <- with(plots, ifelse(
-  plot_tree_BA>=20000, 20000, plot_tree_BA))
-
-ggplot() + 
-  geom_polygon(data = basemap, aes(x = long, y = lat, group = group), 
-               fill = NA, color = "black") + 
-  geom_point(data = plots, mapping = aes(x = x, y = y, color = BA_plot), 
-             alpha = 0.8, size = 4) + 
-  scale_color_gradient2(midpoint = 11000, low="blue", mid="white",
-                        high="red", name="Total tree\nbasal area") +
-  coord_fixed(1.15) +
-  theme_classic() + 
-  theme(axis.line = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())
 
 
 
@@ -215,9 +218,13 @@ ggplot() +
 # PLOTTING PARAMETER ESTIMATES
 # PLOT RANDOM EFFECTS
 # species:con vs. species:het
+# require(brms)
 
-ran <- ranef(full_con_het)
-ran$species[,,1]  # extracts random intercept values for each species[1:3]
+# don't need to extract mcmc samples if you're just going to 
+# plot mean/credible intervals
+
+ran <- ranef(mod)
+ran$species[,,1]  # extracts random intercept values for each species
 ran$species[,,2]  # plot_het_tree_BA
 ran$species[,,3]  # plot_cons_tree_BA
 
@@ -238,44 +245,41 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(cons_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-2.1, 1.5)) +
+  scale_y_continuous(name ="", limits = c(-3, 4)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red") +
-  ggtitle("Effect of conspecific basal area\n ") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
     plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 12))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
-
-
+png("param_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-2.1, 1.5)) +
+  scale_y_continuous(name ="", limits = c(-3, 4)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.5) +
-  ggtitle("Effect of heterospecific basal area\n ") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue", alpha = 0.5) +
   theme_classic() + 
-  
   theme(
     plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 12))
-
-
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# tmax is random effect #4, 5 (het, con, respectively)
+# ELEVATION is random effect #4, 5 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 5])
 cons_betas$term <- row.names(cons_betas)
 het_betas <- as.data.frame(ran$species[,, 4])
@@ -287,47 +291,43 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_ELEV_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.9, 0.6)) +
+  scale_y_continuous(name ="", limits = c(-1.1, 1)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and temperature") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_ELEV_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.9, 0.6)) +
+  scale_y_continuous(name ="", limits = c(-1, 1)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and temperature") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
   
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
-
-
-
-
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# mean_prec is random effect #6, 7 (het, con, respectively)
+# PC1 is random effect #6, 7 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 7])
 cons_betas$term <- row.names(cons_betas)
 het_betas <- as.data.frame(ran$species[,, 6])
@@ -339,45 +339,43 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_PC1_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.4, 0.4)) +
+  scale_y_continuous(name ="", limits = c(-1.5, 1.1)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and precipitation") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_PC1_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.4, 0.4)) +
+  scale_y_continuous(name ="", limits = c(-1.5, 1.1)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and precipitation") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
-  
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
-
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# twi is random effect #8, 9 (het, con, respectively)
+# PC2 is random effect #8, 9 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 9])
 cons_betas$term <- row.names(cons_betas)
 het_betas <- as.data.frame(ran$species[,, 8])
@@ -389,44 +387,42 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_PC2_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.35, 0.55)) +
+  scale_y_continuous(name ="", limits = c(-0.5, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and wetness") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_PC2_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.35, 0.55)) +
+  scale_y_continuous(name ="", limits = c(-0.5, 0.6)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and wetness") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
-  
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
-
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# PC1 is random effect #10, 11 (het, con, respectively)
+# TOP1 is random effect #10, 11 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 11])
 cons_betas$term <- row.names(cons_betas)
 het_betas <- as.data.frame(ran$species[,, 10])
@@ -438,44 +434,42 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_TOP1_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.75, 0.55)) +
+  scale_y_continuous(name ="", limits = c(-0.6, 0.7)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and soil PCA axis 1") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_TOP1_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.75, 0.55)) +
+  scale_y_continuous(name ="", limits = c(-0.6, 0.7)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and soil PCA axis 1") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
-  
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
-
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# pc2 is random effect 12, 13 (het, con, respectively)
+# TOP2 is random effect 12, 13 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 13])
 cons_betas$term <- row.names(cons_betas)
 het_betas <- as.data.frame(ran$species[,, 12])
@@ -487,50 +481,45 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_TOP2_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.8, 0.6)) +
+  scale_y_continuous(name ="", limits = c(-0.35, 0.3)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and soil PCA axis 2") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_TOP2_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.8, 0.6)) +
+  scale_y_continuous(name ="", limits = c(-0.35, 0.3)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and soil PCA axis 2") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
-  
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
-
-
-
-# new model testing effects of elevation
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# Elevation is random effect 12, 13 (het, con, respectively)
-cons_betas <- as.data.frame(ran$species[,, 5])
+# TOP3 is random effect 14, 15 (het, con, respectively)
+cons_betas <- as.data.frame(ran$species[,, 15])
 cons_betas$term <- row.names(cons_betas)
-het_betas <- as.data.frame(ran$species[,, 4])
+het_betas <- as.data.frame(ran$species[,, 14])
 het_betas$term <- row.names(het_betas)
 
 # combine conspecific with heteros estimates into one df
@@ -539,161 +528,169 @@ names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "ter
 con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
 # conspecific random slope for each species
+png("param_TOP3_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.8, 1)) +
+  scale_y_continuous(name ="", limits = c(-0.38, 0.29)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 1, color = "red", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nconspecific basal area and elevation") +
+  geom_point(size = 2, shape = 1, color = "red") + 
+  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
   theme_classic() + 
   theme(
-    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
 
 
 # heterospecific random slope by species
+png("param_TOP3_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
 ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.8, 1)) +
+  scale_y_continuous(name ="", limits = c(-0.38, 0.29)) +
   scale_x_discrete(name ="") +
   # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
-  geom_point(size = 4, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 1, color = "blue", alpha = 0.4) +
-  ggtitle("Effect of interaction between \nheterospecific basal area and elevation") +
+  geom_point(size = 2, shape = 1, color = "blue") + 
+  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
   theme_classic() + 
-  
   theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 14))
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10))
+dev.off()
+
+
+
 
 
 
 # PLOTTING FIXED EFFECTS
 
 # plot posterior distributions
-# require(bayesplot)
-post <- as.array(full_con_het)
-color_scheme_set("gray")
-post.plot <- mcmc_areas(post, pars = c("b_plot_cons_tree_BA", "b_plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+require(bayesplot)
+post <- mod$fit@sim$samples[[1]]
+post2 <- data.frame(cbind(post$b_plot_tree_BA, post$b_propCon))
+names(post2) <- c("b_plot_tree_BA", "b_propCon")
 
+post.plot <- mcmc_areas(post2, pars = c("b_propCon", "b_plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
 post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 1.7)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=10),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
+dev.off()
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_Elevation:propCon", "b_Elevation:plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_ELEV_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+post.plot + 
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
   coord_cartesian(ylim = c(1.5, 2)) +
   theme_classic() + 
   theme(
-    axis.text.x = element_text(size=20),
+    axis.text.x = element_text(size=10),
     axis.line.y = element_blank(),
     axis.ticks.y = element_blank(),
     axis.text.y = element_blank())
+dev.off()
 
 
-post.plot <- mcmc_areas(post, pars = c("b_twi:plot_cons_tree_BA", "b_twi:plot_het_tree_BA"), 
+
+
+post.plot <- mcmc_areas(post, pars = c("b_pc1:propCon", "b_pc1:plot_tree_BA"), 
                         prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
+png("post_PC1_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
 post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  coord_cartesian(ylim = c(1.5, 2.5)) +
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 1.9)) +
   theme_classic() + 
   theme(
-    axis.text.x = element_text(size=20),
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = unit(rep(0.5, 4), "cm"))
-
-
-
-
-post.plot <- mcmc_areas(post, pars = c("b_pc1:plot_cons_tree_BA", "b_pc1:plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
-post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  coord_cartesian(ylim = c(1.5, 2.5)) +
-  theme_classic() + 
-  theme(
-    axis.text.x = element_text(size=20),
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = unit(rep(0.5, 4), "cm"))
-
-
-
-
-
-post.plot <- mcmc_areas(post, pars = c("b_pc2:plot_cons_tree_BA", "b_pc2:plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
-post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  coord_cartesian(ylim = c(1.5, 2.5)) +
-  theme_classic() + 
-  theme(
-    axis.text.x = element_text(size=20),
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = unit(rep(0.5, 4), "cm"))
-
-
-
-
-
-post.plot <- mcmc_areas(post, pars = c("b_tmax:plot_cons_tree_BA", "b_tmax:plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
-post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  coord_cartesian(ylim = c(1.5, 2.5)) +
-  theme_classic() + 
-  theme(
-    axis.text.x = element_text(size=20),
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = unit(rep(0.5, 4), "cm"))
-
-
-
-
-post.plot <- mcmc_areas(post, pars = c("b_mean_prec:plot_cons_tree_BA", "b_mean_prec:plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
-post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  coord_cartesian(ylim = c(1.5, 2.5)) +
-  scale_x_continuous(limits=c(-0.15, 0.1)) +#, breaks=seq(-0.15, 0.15, 0.05)) +
-  theme_classic() + 
-  theme(
-    axis.text.x = element_text(size=20),
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = unit(rep(0.5, 4), "cm"))
-
-
-
-post.plot <- mcmc_areas(post, pars = c("b_Elevation:plot_cons_tree_BA", "b_Elevation:plot_het_tree_BA"), 
-                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
-
-post.plot + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 1) + 
-  scale_x_continuous(limits = c(-0.8, 1)) +
-  coord_cartesian(ylim = c(1.5, 2.1)) +
-  theme_classic() + 
-  theme(
-    axis.text.x = element_text(size=20),
+    axis.text.x = element_text(size=10),
     axis.line.y = element_blank(),
     axis.ticks.y = element_blank(),
     axis.text.y = element_blank())
+dev.off()
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_pc2:propCon", "b_pc2:plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_PC2_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+post.plot + 
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 2)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=10),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
+dev.off()
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_top1:propCon", "b_top1:plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_TOP1_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+post.plot + 
+  scale_x_continuous(limits = c(-0.12, 0.1), breaks = seq(-0.1, 0.1, 0.1)) +
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 2.2)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=10),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
+dev.off()
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_top2:propCon", "b_top2:plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_TOP2_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+post.plot + 
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 2.5)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=10),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
+dev.off()
+
+
+
+
+post.plot <- mcmc_areas(post, pars = c("b_top3:propCon", "b_top3:plot_tree_BA"), 
+                        prob = 0.8, prob_outer = 0.95, point_est = "mean")
+png("post_TOP3_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+post.plot + 
+  geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
+  coord_cartesian(ylim = c(1.5, 2.4)) +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_text(size=10),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank())
+dev.off()
+
+
+
 
 
 
@@ -844,10 +841,22 @@ ggMarginal(p.h, type = "histogram")
 # REPORTING QUANTITATIVE RESULTS
 require(tidyr)
 require(brms)
-post <- as.array(full_con_het)  # array: [# iterations, # chains, # parameters]
+require(bayesplot)
 
+
+# use this code if you had to fill in missing data using mice package.
+# data are already gathered for you
+post <- mod$fit@sim$samples[[1]]
+
+
+# use this code if you're using one data set (no missing data filling in)
+post <- as.array(mod3)  # array: [# iterations, # chains, # parameters]
+
+# if you did above, you need to first
 # gather all iterations across all chains together into one column for each 
 # predictor of interest, which gives you its posterior distribution
+# to do this, use c(t(<df>))
+
 
 # only the sapling count response needs the neg. binom. distribution; for all
 # predictors, you can use normal
@@ -858,42 +867,334 @@ pnbinom(q = 1.5, size = 0.55, mu = mean(sap))  # probabilities you want to repor
 # q = quantile you're interested in; size = shape parameter; mu = mean of posterior
 
 
-twi_BA <- data.frame(post[,,"b_twi:plot_cons_tree_BA"])
-twi_BA <- c(t(twi_BA))
-mcmc_areas(post, pars = "b_twi:plot_cons_tree_BA", prob = 0.8, prob_outer = 0.95, point_est = "mean")
-qnorm(p = 0.025, mean = mean(twi_BA), sd = sd(twi_BA))
-# 95% lower quartile: 0.049464
+# GROUP CON VS. HET
+tot <- data.frame(post[,,"b_propCon"])
+tot <- c(t(tot))
+q <- qnorm(p = 0.025, mean = mean(tot), sd = sd(tot))
 
-twi_het <- data.frame(post[,,"b_twi:plot_het_tree_BA"])
-twi_het <- c(t(twi_het))
-mcmc_areas(post, pars = "b_twi:plot_het_tree_BA", prob = 0.8, prob_outer = 0.95, point_est = "mean")
-pnorm(q = 0.049464, mean = mean(twi_het), sd = sd(twi_het))
-# there is a 61.8% chance that TWI:het_tree_BA is <= the lower 95% quartile of TWI:cons_tree_BA
+con <- data.frame(post[,,"b_plot_tree_BA"])
+con <- c(t(con))
+pnorm(q = q, mean = mean(con), sd = sd(con))
+# there is a 98% chance that propCon is >= tot
 
 
 
-pc1_het <- data.frame(post[,,"b_pc1:plot_het_tree_BA"])
-pc1_het <- c(t(pc1_het))
-qnorm(p = 0.025, mean = mean(pc1_het), sd = sd(pc1_het))
-
-pc1_BA <- data.frame(post[,,"b_pc1:plot_cons_tree_BA"])
-pc1_BA <- c(t(pc1_BA))
-pnorm(q = -0.09403784, mean = mean(pc1_BA), sd = sd(pc1_BA))
-# there is a 36.5% chance that pc1:cons_tree_BA is <= the lower 95% quartile of pc1:het_tree_BA
 
 
+
+
+# AUTOMATE CON VS. HET COMPARISON BY COVARIATE BY SPECIES
+
+# create list of iterations x chains for each parameter (1857 params)
+all_post <- list()
+for(i in 1:1857){
+  all_post[[i]] <- post[, , i]
+}
+
+# name each element of the list based on parameter name
+params <- post[1, 1, ]
+params <- names(params)
+names(all_post) <- params
+
+# add all chains together into one column
+fxn <- function(x) {
+  c(t(x))
+}
+all_post2 <- lapply(all_post, fxn)
+
+# only keep params you want to plot or analyze
+all_post_red <- all_post2[substr(params, 1, 2) == "b_" | 
+                           substr(params, 1, 2) == "r_"]
+
+all_post_red2 <- all_post_red[grepl("propCon", names(all_post_red)) | 
+                                      grepl("plot_tree_BA", names(all_post_red))]
+
+# remove overall con/het to make next steps easier
+all_post_red2 <- all_post_red2[3:702]
+
+# order params alphabetically
+all_post_red2 <- all_post_red2[order(names(all_post_red2))]
+
+# split list up into series of lists grouped by species
+all_post_red3 <- split(all_post_red2, substr(names(all_post_red2), 11, 14))
+
+all_post_red4 <- all_post_red3
+
+
+# ELEVATION
+post_elev <- list()
+for(i in 1:length(all_post_red4)){
+  post_elev[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][8])), 
+                              data.frame(het = unlist(all_post_red4[[i]][1])))
+}
+
+species_names <- names(all_post_red4)
+names(post_elev) <- species_names
+
+elev_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_elev[[i]][["con"]]) < mean(post_elev[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_elev[[i]][["het"]]), sd = sd(post_elev[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_elev[[i]][["con"]]), sd = sd(post_elev[[i]][["con"]]))
+    elev_prob[i, "con_lt_het"] <- 1
+    elev_prob[i, "prob"] <- p
+  }
+  if(mean(post_elev[[i]][["con"]]) > mean(post_elev[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_elev[[i]][["con"]]), sd = sd(post_elev[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_elev[[i]][["het"]]), sd = sd(post_elev[[i]][["het"]]))
+    elev_prob[i, "con_lt_het"] <- 0
+    elev_prob[i, "prob"] <- p
+}
+}
+elev_prob$species <- species_names
+
+
+
+# SLOPE STEEPNESS
+post_ste <- list()
+for(i in 1:length(all_post_red4)){
+  post_ste[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][11])), 
+                      data.frame(het = unlist(all_post_red4[[i]][4])))
+}
+
+names(post_ste) <- species_names
+
+ste_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_ste[[i]][["con"]]) < mean(post_ste[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ste[[i]][["het"]]), sd = sd(post_ste[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_ste[[i]][["con"]]), sd = sd(post_ste[[i]][["con"]]))
+    ste_prob[i, "con_lt_het"] <- 1
+    ste_prob[i, "prob"] <- p
+  }
+  if(mean(post_ste[[i]][["con"]]) > mean(post_ste[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ste[[i]][["con"]]), sd = sd(post_ste[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_ste[[i]][["het"]]), sd = sd(post_ste[[i]][["het"]]))
+    ste_prob[i, "con_lt_het"] <- 0
+    ste_prob[i, "prob"] <- p
+  }
+}
+ste_prob$species <- species_names
+
+
+
+# EAST-WEST DIRECTION
+post_ew <- list()
+for(i in 1:length(all_post_red4)){
+  post_ew[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][12])), 
+                      data.frame(het = unlist(all_post_red4[[i]][5])))
+}
+
+names(post_ew) <- species_names
+
+ew_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_ew[[i]][["con"]]) < mean(post_ew[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ew[[i]][["het"]]), sd = sd(post_ew[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_ew[[i]][["con"]]), sd = sd(post_ew[[i]][["con"]]))
+    ew_prob[i, "con_lt_het"] <- 1
+    ew_prob[i, "prob"] <- p
+  }
+  if(mean(post_ew[[i]][["con"]]) > mean(post_ew[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ew[[i]][["con"]]), sd = sd(post_ew[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_ew[[i]][["het"]]), sd = sd(post_ew[[i]][["het"]]))
+    ew_prob[i, "con_lt_het"] <- 0
+    ew_prob[i, "prob"] <- p
+  }
+}
+ew_prob$species <- species_names
+
+
+
+# NORTH-SOUTH DIRECTION
+post_ns <- list()
+for(i in 1:length(all_post_red4)){
+  post_ns[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][13])), 
+                      data.frame(het = unlist(all_post_red4[[i]][6])))
+}
+
+names(post_ns) <- species_names
+
+ns_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_ns[[i]][["con"]]) < mean(post_ns[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ns[[i]][["het"]]), sd = sd(post_ns[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_ns[[i]][["con"]]), sd = sd(post_ns[[i]][["con"]]))
+    ns_prob[i, "con_lt_het"] <- 1
+    ns_prob[i, "prob"] <- p
+  }
+  if(mean(post_ns[[i]][["con"]]) > mean(post_ns[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_ns[[i]][["con"]]), sd = sd(post_ns[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_ns[[i]][["het"]]), sd = sd(post_ns[[i]][["het"]]))
+    ns_prob[i, "con_lt_het"] <- 0
+    ns_prob[i, "prob"] <- p
+  }
+}
+ns_prob$species <- species_names
+
+
+
+# FERTILITY
+post_fert <- list()
+for(i in 1:length(all_post_red4)){
+  post_fert[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][9])), 
+                      data.frame(het = unlist(all_post_red4[[i]][2])))
+}
+
+names(post_fert) <- species_names
+
+fert_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_fert[[i]][["con"]]) < mean(post_fert[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_fert[[i]][["het"]]), sd = sd(post_fert[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_fert[[i]][["con"]]), sd = sd(post_fert[[i]][["con"]]))
+    fert_prob[i, "con_lt_het"] <- 1
+    fert_prob[i, "prob"] <- p
+  }
+  if(mean(post_fert[[i]][["con"]]) > mean(post_fert[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_fert[[i]][["con"]]), sd = sd(post_fert[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_fert[[i]][["het"]]), sd = sd(post_fert[[i]][["het"]]))
+    fert_prob[i, "con_lt_het"] <- 0
+    fert_prob[i, "prob"] <- p
+  }
+}
+fert_prob$species <- species_names
+
+
+
+# TEXTURE
+post_text <- list()
+for(i in 1:length(all_post_red4)){
+  post_text[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][10])), 
+                      data.frame(het = unlist(all_post_red4[[i]][3])))
+}
+
+names(post_text) <- species_names
+
+text_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_text[[i]][["con"]]) < mean(post_text[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_text[[i]][["het"]]), sd = sd(post_text[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_text[[i]][["con"]]), sd = sd(post_text[[i]][["con"]]))
+    text_prob[i, "con_lt_het"] <- 1
+    text_prob[i, "prob"] <- p
+  }
+  if(mean(post_text[[i]][["con"]]) > mean(post_text[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_text[[i]][["con"]]), sd = sd(post_text[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_text[[i]][["het"]]), sd = sd(post_text[[i]][["het"]]))
+    text_prob[i, "con_lt_het"] <- 0
+    text_prob[i, "prob"] <- p
+  }
+}
+text_prob$species <- species_names
+
+
+
+
+# MAIN CON VS. HET EFFECT
+post_main <- list()
+for(i in 1:length(all_post_red4)){
+  post_main[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][14])), 
+                      data.frame(het = unlist(all_post_red4[[i]][7])))
+}
+
+names(post_main) <- species_names
+
+main_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
+for(i in 1:50){
+  if(mean(post_main[[i]][["con"]]) < mean(post_main[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_main[[i]][["het"]]), sd = sd(post_main[[i]][["het"]]))
+    p <- pnorm(q = q, mean = mean(post_main[[i]][["con"]]), sd = sd(post_main[[i]][["con"]]))
+    main_prob[i, "con_lt_het"] <- 1
+    main_prob[i, "prob"] <- p
+  }
+  if(mean(post_main[[i]][["con"]]) > mean(post_main[[i]][["het"]])){
+    q <- qnorm(p = 0.025, mean = mean(post_main[[i]][["con"]]), sd = sd(post_main[[i]][["con"]]))
+    p <- pnorm(q = q, mean = mean(post_main[[i]][["het"]]), sd = sd(post_main[[i]][["het"]]))
+    main_prob[i, "con_lt_het"] <- 0
+    main_prob[i, "prob"] <- p
+  }
+}
+main_prob$species <- species_names
+
+
+results_list <- list(elev_prob, ste_prob, ew_prob, ns_prob, fert_prob, text_prob, main_prob)
+
+
+for(i in 1:length(results_list)){
+  results_list[[i]][, "magnitude"] <- ifelse(
+    results_list[[i]][, "prob"] < 0.60, "low", ifelse(
+      results_list[[i]][, "prob"] < 0.85, "mod", "high"
+    )
+  )
+}
+
+for(i in 1:length(results_list)){
+  results_list[[i]][, "color"] <- ifelse(
+    results_list[[i]][, "magnitude"] == "high" & results_list[[i]][, "con_lt_het"] == 1, "red", ifelse(
+      results_list[[i]][, "magnitude"] == "high" & results_list[[i]][, "con_lt_het"] == 0, "blue", ifelse(
+        results_list[[i]][, "magnitude"] == "mod" & results_list[[i]][, "con_lt_het"] == 1, "pink", ifelse(
+          results_list[[i]][, "magnitude"] == "mod" & results_list[[i]][, "con_lt_het"] == 0, "lightblue", NA)
+    )
+  )
+  )
+}
+
+names(results_list) <- c("elev", "ste", "ew", "ns", "fert", "text", "main")
+
+results_list[["elev"]][, "term"] <- "elev"
+results_list[["ste"]][, "term"] <- "ste"
+results_list[["ew"]][, "term"] <- "ew"
+results_list[["ns"]][, "term"] <- "ns"
+results_list[["fert"]][, "term"] <- "fert"
+results_list[["text"]][, "term"] <- "text"
+results_list[["main"]][, "term"] <- "main"
+
+# bind each param together into one df (row bind)
+summary_all <- rbind(data.frame(results_list[["elev"]]), data.frame(results_list[["ste"]]), data.frame(results_list[["ew"]]),
+                     data.frame(results_list[["ns"]]), data.frame(results_list[["fert"]]), data.frame(results_list[["text"]]), 
+                     data.frame(results_list[["main"]]))
+
+# provide dummy x-variable, one for each env variable
+summary_all$x <- with(summary_all, ifelse(
+  term == "main", 1, ifelse(term == "elev", 2, ifelse(term == "ste", 3, ifelse(
+    term == "ew", 4, ifelse(term == "ns", 5, ifelse(term == "fert", 6, ifelse(
+      term == "text", 7, "oops")
+    )))
+  )))
+)
+
+write.csv(summary_all, "chap3_results_summary_for_graphing.csv", row.names = FALSE)
+
+summary_all <- summary_all %>% arrange(desc(con_lt_het), desc(prob))
+
+ggplot(summary_all, aes(x = x, y = reorder(species, -con_lt_het)), color = color) + 
+  geom_point(size = 3) + 
+  scale_x_discrete(name = "", labels = c("Main", "Elevation", "Steepness",
+                                         "East-West", "North-South", "Fertility", "Texture")) + 
+  scale_y_discrete(name = "") +
+  scale_color_manual(values = c("blue", "lightblue", "pink", "red", "white")) + 
+  theme_classic()
+
+
+
+# MIGHT WANT TO ORDER SPECIES BY MAGNITUDE OF CNDD, HIGH TO LOW
+
+ 
+ 
+
+#ANALYZING SPECIES EFFECTS INDIVIDUALLY
 
 # INTERSPECIFIC CONSPECIFIC DD EFFECTS (POSITIVE AND NEGATIVE)
 # POSITIVE
-ilde <- data.frame(post[,,"r_species[Ilde,plot_cons_tree_BA]"])
+ilde <- data.frame(post[, , "r_species[Ilde,propCon]"])
 ilde <- c(t(ilde))
-qnorm(p = 0.025, mean = mean(ilde), sd = sd(ilde))
-# 95% lower quartile: 0.2911469
+q <- qnorm(p = 0.975, mean = mean(ilde), sd = sd(ilde))
 
-ilde_het <- data.frame(post[,,"r_species[Ilde,plot_het_tree_BA]"])
+ilde_het <- data.frame(post[, , "r_species[Ilde,plot_tree_BA]"])
 ilde_het <- c(t(ilde_het))
-pnorm(q = 0.2911469, mean = mean(ilde_het), sd = sd(ilde_het))
-# there is a 99.0% chance that Ilde-het_tree_BA is <= the lower 95% quartile of Ilde-cons_tree_BA
+pnorm(q = q, mean = mean(ilde_het), sd = sd(ilde_het))
+
 
 
 acsa <- data.frame(post[,,"r_species[Acsa,plot_cons_tree_BA]"])
