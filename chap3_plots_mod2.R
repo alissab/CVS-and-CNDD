@@ -15,6 +15,10 @@ species_num <- dat %>% group_by(species) %>% summarise(n_plots = n())
 dat <- left_join(dat, species_num, by="species")
 dat <- dat %>% filter(n_plots >= 100)
 
+# remove Castanea and shrubs that don't often reach >5cm DBH
+to_remove <- c("Cade", "Astr", "Libe")
+dat <- dat %>% filter(! species %in% to_remove)
+
 # scale numeric data
 scaled_vars <- c("Elevation", "pc1", "pc2", "propCon", "plot_tree_BA", "top1", "top2", "top3")
 dat[, scaled_vars] <- scale(dat[, scaled_vars])
