@@ -569,22 +569,23 @@ dev.off()
 
 # plot posterior distributions
 require(bayesplot)
-post <- mod$fit@sim$samples[[1]]
+post <- mod3$fit@sim$samples[[1]]
 post2 <- data.frame(cbind(post$b_plot_tree_BA, post$b_propCon))
 names(post2) <- c("b_plot_tree_BA", "b_propCon")
 
 post.plot <- mcmc_areas(post2, pars = c("b_propCon", "b_plot_tree_BA"), 
                         prob = 0.8, prob_outer = 0.95, point_est = "mean")
-png("post_con_het.png", width = 1.5, height = 0.8, units = "in", res = 300)
+png("post_con_het.png", width = 3, height = 1.5, units = "in", res = 600)
 post.plot + 
   geom_vline(xintercept = 0, color = "gray50", linetype = "dashed", size = 0.75) + 
-  coord_cartesian(ylim = c(1.5, 1.7)) +
+  # coord_cartesian(ylim = c(1.5, 1.7)) +
+  scale_y_discrete(labels = c("Conspecific\neffect    ", "Heterospecific\neffect       ")) +
   theme_classic() + 
   theme(
-    axis.text.x = element_text(size=10),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
     axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank())
+    axis.ticks.y = element_blank())
 dev.off()
 
 
@@ -884,10 +885,11 @@ pnorm(q = q, mean = mean(con), sd = sd(con))
 
 
 # AUTOMATE CON VS. HET COMPARISON BY COVARIATE BY SPECIES
+post <- as.array(mod3)
 
 # create list of iterations x chains for each parameter (1857 params)
 all_post <- list()
-for(i in 1:1857){
+for(i in 1:length(post[1, 1, ])){
   all_post[[i]] <- post[, , i]
 }
 
@@ -896,7 +898,7 @@ params <- post[1, 1, ]
 params <- names(params)
 names(all_post) <- params
 
-# add all chains together into one column
+# add all chains together into one column for each parameter separately
 fxn <- function(x) {
   c(t(x))
 }
@@ -910,7 +912,7 @@ all_post_red2 <- all_post_red[grepl("propCon", names(all_post_red)) |
                                       grepl("plot_tree_BA", names(all_post_red))]
 
 # remove overall con/het to make next steps easier
-all_post_red2 <- all_post_red2[3:702]
+all_post_red2 <- all_post_red2[3:562]
 
 # order params alphabetically
 all_post_red2 <- all_post_red2[order(names(all_post_red2))]
@@ -932,7 +934,7 @@ species_names <- names(all_post_red4)
 names(post_elev) <- species_names
 
 elev_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_elev[[i]][["con"]]) < mean(post_elev[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_elev[[i]][["het"]]), sd = sd(post_elev[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_elev[[i]][["con"]]), sd = sd(post_elev[[i]][["con"]]))
@@ -960,7 +962,7 @@ for(i in 1:length(all_post_red4)){
 names(post_ste) <- species_names
 
 ste_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_ste[[i]][["con"]]) < mean(post_ste[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_ste[[i]][["het"]]), sd = sd(post_ste[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_ste[[i]][["con"]]), sd = sd(post_ste[[i]][["con"]]))
@@ -988,7 +990,7 @@ for(i in 1:length(all_post_red4)){
 names(post_ew) <- species_names
 
 ew_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_ew[[i]][["con"]]) < mean(post_ew[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_ew[[i]][["het"]]), sd = sd(post_ew[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_ew[[i]][["con"]]), sd = sd(post_ew[[i]][["con"]]))
@@ -1016,7 +1018,7 @@ for(i in 1:length(all_post_red4)){
 names(post_ns) <- species_names
 
 ns_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_ns[[i]][["con"]]) < mean(post_ns[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_ns[[i]][["het"]]), sd = sd(post_ns[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_ns[[i]][["con"]]), sd = sd(post_ns[[i]][["con"]]))
@@ -1044,7 +1046,7 @@ for(i in 1:length(all_post_red4)){
 names(post_fert) <- species_names
 
 fert_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_fert[[i]][["con"]]) < mean(post_fert[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_fert[[i]][["het"]]), sd = sd(post_fert[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_fert[[i]][["con"]]), sd = sd(post_fert[[i]][["con"]]))
@@ -1072,7 +1074,7 @@ for(i in 1:length(all_post_red4)){
 names(post_text) <- species_names
 
 text_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_text[[i]][["con"]]) < mean(post_text[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_text[[i]][["het"]]), sd = sd(post_text[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_text[[i]][["con"]]), sd = sd(post_text[[i]][["con"]]))
@@ -1101,7 +1103,7 @@ for(i in 1:length(all_post_red4)){
 names(post_main) <- species_names
 
 main_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:50){
+for(i in 1:40){
   if(mean(post_main[[i]][["con"]]) < mean(post_main[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_main[[i]][["het"]]), sd = sd(post_main[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_main[[i]][["con"]]), sd = sd(post_main[[i]][["con"]]))
@@ -1163,25 +1165,178 @@ summary_all$x <- with(summary_all, ifelse(
     )))
   )))
 )
+summary_all$x <- as.numeric(summary_all$x)
 
-write.csv(summary_all, "chap3_results_summary_for_graphing.csv", row.names = FALSE)
+# write.csv(summary_all, "chap3_results_summary_for_graphing.csv", row.names = FALSE)
+# summary_all <- read.csv("chap3_results_summary_for_graphing.csv", stringsAsFactors = FALSE)
 
-summary_all <- summary_all %>% arrange(desc(con_lt_het), desc(prob))
+# order species by magnitude of CNDD, so order by term "main"
+sp_order <- summary_all[summary_all$term == "main",]
+sp_order <- sp_order %>% arrange(desc(con_lt_het), desc(prob))
+sp_order$order <- 1:40
+summary_all <- left_join(summary_all, sp_order[,c("species", "order")], by = "species")
 
-ggplot(summary_all, aes(x = x, y = reorder(species, -con_lt_het)), color = color) + 
-  geom_point(size = 3) + 
-  scale_x_discrete(name = "", labels = c("Main", "Elevation", "Steepness",
-                                         "East-West", "North-South", "Fertility", "Texture")) + 
-  scale_y_discrete(name = "") +
-  scale_color_manual(values = c("blue", "lightblue", "pink", "red", "white")) + 
-  theme_classic()
+sp_levels <- data.frame(species = summary_all$species, order = summary_all$order)
+sp_levels <- unique(sp_levels)
+sp_levels <- sp_levels %>% arrange(desc(order))
+sp_levels <- sp_levels$species
+sp_levels <- as.character(sp_levels)
+
+png("species_probs_summary.png", width = 6, height = 8, units = "in", res = 600)
+ggplot(summary_all, aes(x = x, y = species, color = color)) + 
+  geom_hline(mapping = NULL, yintercept = seq(1, 40, 2), colour = 'grey80') +
+  geom_point(size = 3.5) +
+  scale_x_continuous(name = "", breaks = 1:7,
+                     labels = c("Main effect", "Elevation", "Slope   \nsteepness",
+                                         "East-West\nfacing  ", "North-South\nfacing   ", "Soil fertility", "Soil texture")) +
+  scale_y_discrete(name = "", limits = sp_levels) +
+  scale_color_manual(values = c("blue", "lightblue", "pink", "red", "white")) +
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 12, angle = 60, hjust = 1),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank())
+dev.off()
 
 
 
-# MIGHT WANT TO ORDER SPECIES BY MAGNITUDE OF CNDD, HIGH TO LOW
 
- 
- 
+
+# PLOT EFFECT SIZES BY SPECIES
+
+# RESPONSE OF <SINGLE SPECIES> TO ELEV*TOTAL VS. ELEV*CON
+# create new dataframe on which to make predictions for con and totalBA
+# for each new species you want to analyze, only need to change 'species = "Xxxx"'
+# when creating a new dataframe (for both "tree" and "con" new dataframes)
+# you'll also need to change the min/max Elevation values for each species
+# QURU (-1, 2); QUVE (-1, 0.5); QUAL (-1.05, 0.5); LITU (-0.8, ); MORU (); HAVI (); SAAS ()
+
+# STOPPED AT MORU BC ESTIMATES ARE REALLY BAD. SAMPLE SIZE ISSUE WITH THE SHRUBBY THINGS
+# MAY WANT TO REMOVE AND RE-ANALYZE DATA
+# REMOVE THINGS WITH FEW OR NO PLOTS WITH BASAL AREAS >1000
+# ALSO SPECIES WHOSE SAPLING COUNT NEVER REACHES 10/PLOT
+
+moru <- dat[dat$species == "Moru", ]
+new_tree.elev <- data.frame(Elevation = rep(c(quantile(moru$Elevation, 0.25, na.rm = TRUE), 
+                                            quantile(moru$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
+                      pc1 = mean(moru$pc1, na.rm = TRUE), pc2 = mean(moru$pc2, na.rm = TRUE), 
+                      top1 = mean(moru$top1, na.rm = TRUE), top2 = mean(moru$top2, na.rm = TRUE), 
+                      top3 = mean(moru$top3, na.rm = TRUE), 
+                      plot_tree_BA = rep(seq(quantile(moru$plot_tree_BA, 0.25, na.rm = TRUE), 
+                                             quantile(moru$plot_tree_BA, 0.75, na.rm = TRUE), length.out = 5), times = 2), 
+                      propCon = mean(moru$propCon, na.rm = TRUE), species = "Moru")
+ptree.elev <- predict(mod3, newdata = new_tree.elev)
+ptree.elev <- data.frame(Elevation = new_tree.elev$Elevation, 
+                            plot_tree_BA = new_tree.elev$plot_tree_BA, 
+                            ptree.elev)
+# add raw basal area numbers (for plotting)
+# import raw data - only use raw data for getting scaling information for plotting
+# must use "dat" (in workspace image for best performing model) for creating new data/making predictions
+
+raw <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE)
+raw$streeBA <- scale(raw$plot_tree_BA)
+ptree.elev$streeBA <- attr(raw$streeBA, 'scaled:scale') * ptree.elev$plot_tree_BA + attr(raw$streeBA, 'scaled:center')
+
+
+new_con.elev <- data.frame(Elevation = rep(c(quantile(moru$Elevation, 0.25, na.rm = TRUE), 
+                                             quantile(moru$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
+                           pc1 = mean(moru$pc1, na.rm = TRUE), pc2 = mean(moru$pc2, na.rm = TRUE), 
+                           top1 = mean(moru$top1, na.rm = TRUE), top2 = mean(moru$top2, na.rm = TRUE), 
+                           top3 = mean(moru$top3, na.rm = TRUE), 
+                           propCon = rep(seq(quantile(moru$propCon, 0.25, na.rm = TRUE), 
+                                                  quantile(moru$propCon, 0.75, na.rm = TRUE), length.out = 5), times = 2), 
+                           plot_tree_BA = mean(moru$plot_tree_BA, na.rm = TRUE), species = "Moru")
+pcon.elev <- predict(mod3, newdata = new_con.elev)
+pcon.elev <- data.frame(Elevation = new_con.elev$Elevation, 
+                         propCon = new_con.elev$propCon, 
+                         pcon.elev)
+raw$propCon <- with(raw, plot_cons_tree_BA / plot_tree_BA)
+raw$scon <- scale(raw$propCon)
+pcon.elev$scon <- attr(raw$scon, 'scaled:scale') * pcon.elev$propCon + attr(raw$scon, 'scaled:center')
+
+
+# TOTAL BA FOR HIGH ELEVATIONS
+# change name of png file each time you change the species
+# need to change ylim of graphs
+# QURU (0, 18); QUVE (0, 19); QUAL (0, 15); LITU(0, 19); 
+
+png("total_at_HIGH_ELEV_moru.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
+  # scale_y_continuous(limits=c(0, 19), name="") +
+  scale_x_continuous(name = "") +
+  geom_ribbon(data=ptree.elev[ptree.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
+              alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
+  geom_line(data=ptree.elev[ptree.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+              aes(x=streeBA, y=Estimate), size=1, color="gray60") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+# CON FOR HIGH ELEVATIONS
+png("con_at_HIGH_ELEV_moru.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(pcon.elev, aes(x=scon, y=Estimate)) +
+  # scale_y_continuous(limits=c(0, 19), name = "") +
+  scale_x_continuous(limits=c(-0.01, 1.01), name = "") +
+  geom_ribbon(data=pcon.elev[pcon.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=scon),
+              alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
+  geom_line(data=pcon.elev[pcon.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+            aes(x=scon, y=Estimate), size=1, color="gray10") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+
+# TOTAL BA FOR LOW ELEVATIONS
+png("total_at_LOW_ELEV_litu.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
+  scale_x_continuous(name = "") +
+  # scale_y_continuous(limits=c(0, 19), name="") +
+  geom_ribbon(data=ptree.elev[ptree.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
+              alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
+  geom_line(data=ptree.elev[ptree.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+            aes(x=streeBA, y=Estimate), size=1, color="gray60") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+# CON FOR LOW ELEVATIONS
+png("con_at_LOW_ELEV_litu.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(pcon.elev, aes(x=scon, y=Estimate)) +
+  scale_x_continuous(limits=c(-0.01, 1.1), name = "") +  
+  # scale_y_continuous(limits=c(0, 19), name="") +
+  geom_ribbon(data=pcon.elev[pcon.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=scon),
+              alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
+  geom_line(data=pcon.elev[pcon.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+            aes(x=scon, y=Estimate), size=1, color="gray10") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+
+
+
+
+# OLD CODE
 
 #ANALYZING SPECIES EFFECTS INDIVIDUALLY
 

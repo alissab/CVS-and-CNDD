@@ -1,6 +1,6 @@
 
-setwd("/pine/scr/a/l/alissab/Chap3")
-
+setwd("/pine/scr/a/l/alissab/new_chap3")
+# smaller mods just need 20g; larger mods need more - 50g?
 require(dplyr)
 require(brms)
 require(future)
@@ -15,8 +15,9 @@ species_num <- dat %>% group_by(species) %>% summarise(n_plots = n())
 dat <- left_join(dat, species_num, by="species")
 dat <- dat %>% filter(n_plots >= 100)
 
-# remove Castanea and shrubs that don't often reach >5cm DBH
-to_remove <- c("Cade", "Astr", "Libe")
+# remove Castanea and shrubs that don't often reach >5cm DBH or often have multi-stem trunks
+# also remove species whose sapling count never reaches 10/plot
+to_remove <- c("Cade", "Astr", "Libe", "Ceca", "Havi", "Ilde", "Moru", "Saal", "Qust", "Qumich")
 dat <- dat %>% filter(! species %in% to_remove)
 
 # scale numeric data
@@ -109,8 +110,8 @@ mod4 <- brm( sap_plot_count ~
             data = dat
 )
 
-save.image("plots_mod4.RData")
+save.image("plots_mod4_new2.RData")
 
 # model selection
-k_mod <- kfold(mod4, K = 10)
-save.image("plots_mod4.RData")
+k_mod4 <- kfold(mod4, K = 10)
+save.image("plots_mod4_new2.RData")
