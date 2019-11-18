@@ -839,7 +839,7 @@ ggMarginal(p.h, type = "histogram")
 
 
 
-# REPORTING QUANTITATIVE RESULTS
+# REPORTING QUANTITATIVE RESULTS, THEN GRAPHING THE SUMMARY OF THOSE
 require(tidyr)
 require(brms)
 require(bayesplot)
@@ -1208,23 +1208,16 @@ dev.off()
 # create new dataframe on which to make predictions for con and totalBA
 # for each new species you want to analyze, only need to change 'species = "Xxxx"'
 # when creating a new dataframe (for both "tree" and "con" new dataframes)
-# you'll also need to change the min/max Elevation values for each species
-# QURU (-1, 2); QUVE (-1, 0.5); QUAL (-1.05, 0.5); LITU (-0.8, ); MORU (); HAVI (); SAAS ()
 
-# STOPPED AT MORU BC ESTIMATES ARE REALLY BAD. SAMPLE SIZE ISSUE WITH THE SHRUBBY THINGS
-# MAY WANT TO REMOVE AND RE-ANALYZE DATA
-# REMOVE THINGS WITH FEW OR NO PLOTS WITH BASAL AREAS >1000
-# ALSO SPECIES WHOSE SAPLING COUNT NEVER REACHES 10/PLOT
-
-moru <- dat[dat$species == "Moru", ]
-new_tree.elev <- data.frame(Elevation = rep(c(quantile(moru$Elevation, 0.25, na.rm = TRUE), 
-                                            quantile(moru$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
-                      pc1 = mean(moru$pc1, na.rm = TRUE), pc2 = mean(moru$pc2, na.rm = TRUE), 
-                      top1 = mean(moru$top1, na.rm = TRUE), top2 = mean(moru$top2, na.rm = TRUE), 
-                      top3 = mean(moru$top3, na.rm = TRUE), 
-                      plot_tree_BA = rep(seq(quantile(moru$plot_tree_BA, 0.25, na.rm = TRUE), 
-                                             quantile(moru$plot_tree_BA, 0.75, na.rm = TRUE), length.out = 5), times = 2), 
-                      propCon = mean(moru$propCon, na.rm = TRUE), species = "Moru")
+qual <- dat[dat$species == "Qual", ]
+new_tree.elev <- data.frame(Elevation = rep(c(quantile(qual$Elevation, 0.25, na.rm = TRUE), 
+                                            quantile(qual$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
+                      pc1 = mean(qual$pc1, na.rm = TRUE), pc2 = mean(qual$pc2, na.rm = TRUE), 
+                      top1 = mean(qual$top1, na.rm = TRUE), top2 = mean(qual$top2, na.rm = TRUE), 
+                      top3 = mean(qual$top3, na.rm = TRUE), 
+                      plot_tree_BA = rep(seq(min(qual$plot_tree_BA, na.rm = TRUE), 
+                                             max(qual$plot_tree_BA, na.rm = TRUE), length.out = 5), times = 2), 
+                      propCon = mean(qual$propCon, na.rm = TRUE), species = "Qual")
 ptree.elev <- predict(mod3, newdata = new_tree.elev)
 ptree.elev <- data.frame(Elevation = new_tree.elev$Elevation, 
                             plot_tree_BA = new_tree.elev$plot_tree_BA, 
@@ -1233,19 +1226,19 @@ ptree.elev <- data.frame(Elevation = new_tree.elev$Elevation,
 # import raw data - only use raw data for getting scaling information for plotting
 # must use "dat" (in workspace image for best performing model) for creating new data/making predictions
 
-raw <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE)
+# raw <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE)
 raw$streeBA <- scale(raw$plot_tree_BA)
 ptree.elev$streeBA <- attr(raw$streeBA, 'scaled:scale') * ptree.elev$plot_tree_BA + attr(raw$streeBA, 'scaled:center')
 
 
-new_con.elev <- data.frame(Elevation = rep(c(quantile(moru$Elevation, 0.25, na.rm = TRUE), 
-                                             quantile(moru$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
-                           pc1 = mean(moru$pc1, na.rm = TRUE), pc2 = mean(moru$pc2, na.rm = TRUE), 
-                           top1 = mean(moru$top1, na.rm = TRUE), top2 = mean(moru$top2, na.rm = TRUE), 
-                           top3 = mean(moru$top3, na.rm = TRUE), 
-                           propCon = rep(seq(quantile(moru$propCon, 0.25, na.rm = TRUE), 
-                                                  quantile(moru$propCon, 0.75, na.rm = TRUE), length.out = 5), times = 2), 
-                           plot_tree_BA = mean(moru$plot_tree_BA, na.rm = TRUE), species = "Moru")
+new_con.elev <- data.frame(Elevation = rep(c(quantile(qual$Elevation, 0.25, na.rm = TRUE), 
+                                             quantile(qual$Elevation, 0.75, na.rm = TRUE)) , each = 5), 
+                           pc1 = mean(qual$pc1, na.rm = TRUE), pc2 = mean(qual$pc2, na.rm = TRUE), 
+                           top1 = mean(qual$top1, na.rm = TRUE), top2 = mean(qual$top2, na.rm = TRUE), 
+                           top3 = mean(qual$top3, na.rm = TRUE), 
+                           propCon = rep(seq(min(qual$propCon, na.rm = TRUE), 
+                                                  max(qual$propCon, na.rm = TRUE), length.out = 5), times = 2), 
+                           plot_tree_BA = mean(qual$plot_tree_BA, na.rm = TRUE), species = "Qual")
 pcon.elev <- predict(mod3, newdata = new_con.elev)
 pcon.elev <- data.frame(Elevation = new_con.elev$Elevation, 
                          propCon = new_con.elev$propCon, 
@@ -1258,16 +1251,16 @@ pcon.elev$scon <- attr(raw$scon, 'scaled:scale') * pcon.elev$propCon + attr(raw$
 # TOTAL BA FOR HIGH ELEVATIONS
 # change name of png file each time you change the species
 # need to change ylim of graphs
-# QURU (0, 18); QUVE (0, 19); QUAL (0, 15); LITU(0, 19); 
+# qual (0, 14); QUVE (0, 19); QUAL (0, 15)
 
-png("total_at_HIGH_ELEV_moru.png", width = 1.5, height = 1, units = "in", res = 600)
+png("total_at_HIGH_ELEV_qual.png", width = 1.5, height = 1, units = "in", res = 600)
 ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
-  # scale_y_continuous(limits=c(0, 19), name="") +
+  scale_y_continuous(limits=c(0, 10), breaks = c(0, 5, 10), name="") +
   scale_x_continuous(name = "") +
-  geom_ribbon(data=ptree.elev[ptree.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+  geom_ribbon(data=ptree.elev[ptree.elev$Elevation > 0, ], inherit.aes=FALSE,
               aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
               alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
-  geom_line(data=ptree.elev[ptree.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+  geom_line(data=ptree.elev[ptree.elev$Elevation > 0, ], inherit.aes=FALSE,
               aes(x=streeBA, y=Estimate), size=1, color="gray60") +
   scale_fill_manual(values="gray5") +
   theme_classic() +
@@ -1278,14 +1271,14 @@ ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
 dev.off()
 
 # CON FOR HIGH ELEVATIONS
-png("con_at_HIGH_ELEV_moru.png", width = 1.5, height = 1, units = "in", res = 600)
+png("con_at_HIGH_ELEV_qual.png", width = 1.5, height = 1, units = "in", res = 600)
 ggplot(pcon.elev, aes(x=scon, y=Estimate)) +
-  # scale_y_continuous(limits=c(0, 19), name = "") +
-  scale_x_continuous(limits=c(-0.01, 1.01), name = "") +
-  geom_ribbon(data=pcon.elev[pcon.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+  scale_y_continuous(limits=c(0, 10), breaks = c(0, 5, 10), name = "") +
+  scale_x_continuous(limits=c(-0.01, 1.01), breaks =  c(0, 0.3, 0.6, 0.9), name = "") +
+  geom_ribbon(data=pcon.elev[pcon.elev$Elevation > 0, ], inherit.aes=FALSE,
               aes(ymin=Q2.5, ymax=Q97.5, x=scon),
               alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
-  geom_line(data=pcon.elev[pcon.elev$Elevation > -0.7, ], inherit.aes=FALSE,
+  geom_line(data=pcon.elev[pcon.elev$Elevation > 0, ], inherit.aes=FALSE,
             aes(x=scon, y=Estimate), size=1, color="gray10") +
   scale_fill_manual(values="gray5") +
   theme_classic() +
@@ -1297,14 +1290,14 @@ dev.off()
 
 
 # TOTAL BA FOR LOW ELEVATIONS
-png("total_at_LOW_ELEV_litu.png", width = 1.5, height = 1, units = "in", res = 600)
+png("total_at_LOW_ELEV_qual.png", width = 1.5, height = 1, units = "in", res = 600)
 ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
   scale_x_continuous(name = "") +
-  # scale_y_continuous(limits=c(0, 19), name="") +
-  geom_ribbon(data=ptree.elev[ptree.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+  scale_y_continuous(limits=c(0, 10), breaks = c(0, 5, 10), name="") +
+  geom_ribbon(data=ptree.elev[ptree.elev$Elevation < 0, ], inherit.aes=FALSE,
               aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
               alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
-  geom_line(data=ptree.elev[ptree.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+  geom_line(data=ptree.elev[ptree.elev$Elevation < 0, ], inherit.aes=FALSE,
             aes(x=streeBA, y=Estimate), size=1, color="gray60") +
   scale_fill_manual(values="gray5") +
   theme_classic() +
@@ -1315,14 +1308,14 @@ ggplot(ptree.elev, aes(x=streeBA, y=Estimate)) +
 dev.off()
 
 # CON FOR LOW ELEVATIONS
-png("con_at_LOW_ELEV_litu.png", width = 1.5, height = 1, units = "in", res = 600)
+png("con_at_LOW_ELEV_qual.png", width = 1.5, height = 1, units = "in", res = 600)
 ggplot(pcon.elev, aes(x=scon, y=Estimate)) +
-  scale_x_continuous(limits=c(-0.01, 1.1), name = "") +  
-  # scale_y_continuous(limits=c(0, 19), name="") +
-  geom_ribbon(data=pcon.elev[pcon.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+  scale_x_continuous(limits=c(-0.01, 1.1), breaks =  c(0, 0.3, 0.6, 0.9), name = "") +
+  scale_y_continuous(limits=c(0, 10), breaks = c(0, 5, 10), name="") +
+  geom_ribbon(data=pcon.elev[pcon.elev$Elevation < 0, ], inherit.aes=FALSE,
               aes(ymin=Q2.5, ymax=Q97.5, x=scon),
               alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
-  geom_line(data=pcon.elev[pcon.elev$Elevation < -0.7, ], inherit.aes=FALSE,
+  geom_line(data=pcon.elev[pcon.elev$Elevation < 0, ], inherit.aes=FALSE,
             aes(x=scon, y=Estimate), size=1, color="gray10") +
   scale_fill_manual(values="gray5") +
   theme_classic() +
@@ -1331,6 +1324,132 @@ ggplot(pcon.elev, aes(x=scon, y=Estimate)) +
     axis.title=element_blank(),
     plot.margin = unit(rep(1, 4), "mm"))
 dev.off()
+
+
+
+
+
+
+# RESPONSE OF <SINGLE SPECIES> TO fert*TOTAL VS. fert*CON
+
+nysy <- dat[dat$species == "Nysy", ]
+new_tree.fert <- data.frame(Elevation = mean(nysy$Elevation, na.rm = TRUE), 
+                            pc1 = rep(c(quantile(nysy$pc1, 0.25, na.rm = TRUE),
+                                        quantile(nysy$pc1, 0.75, na.rm = TRUE)), each = 5),
+                            pc2 = mean(nysy$pc2, na.rm = TRUE), 
+                            top1 = mean(nysy$top1, na.rm = TRUE), 
+                            top2 = mean(nysy$top2, na.rm = TRUE), 
+                            top3 = mean(nysy$top3, na.rm = TRUE), 
+                            plot_tree_BA = rep(seq(min(nysy$plot_tree_BA, na.rm = TRUE), 
+                                                   max(nysy$plot_tree_BA, na.rm = TRUE), length.out = 5), times = 2), 
+                            propCon = mean(nysy$propCon, na.rm = TRUE), species = "Nysy")
+ptree.fert <- predict(mod3, newdata = new_tree.fert)
+ptree.fert <- data.frame(pc1 = new_tree.fert$pc1, 
+                         plot_tree_BA = new_tree.fert$plot_tree_BA, 
+                         ptree.fert)
+
+# raw <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE)
+raw$streeBA <- scale(raw$plot_tree_BA)
+ptree.fert$streeBA <- attr(raw$streeBA, 'scaled:scale') * ptree.fert$plot_tree_BA + attr(raw$streeBA, 'scaled:center')
+
+
+new_con.fert <- data.frame(Elevation = mean(nysy$Elevation, na.rm = TRUE), 
+                           pc1 = rep(c(quantile(nysy$pc1, 0.25, na.rm = TRUE),
+                                       quantile(nysy$pc1, 0.75, na.rm = TRUE)), each = 5), 
+                           pc2 = mean(nysy$pc2, na.rm = TRUE), 
+                           top1 = mean(nysy$top1, na.rm = TRUE), 
+                           top2 = mean(nysy$top2, na.rm = TRUE), 
+                           top3 = mean(nysy$top3, na.rm = TRUE), 
+                           propCon = rep(seq(min(nysy$propCon, na.rm = TRUE), 
+                                             max(nysy$propCon, na.rm = TRUE), length.out = 5), times = 2), 
+                           plot_tree_BA = mean(nysy$plot_tree_BA, na.rm = TRUE), species = "Nysy")
+pcon.fert <- predict(mod3, newdata = new_con.fert)
+pcon.fert <- data.frame(pc1 = new_con.fert$pc1, 
+                        propCon = new_con.fert$propCon, 
+                        pcon.fert)
+raw$propCon <- with(raw, plot_cons_tree_BA / plot_tree_BA)
+raw$scon <- scale(raw$propCon)
+pcon.fert$scon <- attr(raw$scon, 'scaled:scale') * pcon.fert$propCon + attr(raw$scon, 'scaled:center')
+
+
+# TOTAL BA FOR HIGH FERTILITY
+# change name of png file each time you change the species
+# need to change ylim of graphs
+
+png("total_at_HIGH_fert_nysy.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(ptree.fert, aes(x=streeBA, y=Estimate)) +
+  scale_y_continuous(limits=c(0, 42), name="") +
+  scale_x_continuous(name = "", breaks = seq(0, 35000, 10000)) +
+  geom_ribbon(data=ptree.fert[ptree.fert$pc1 > 0, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
+              alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
+  geom_line(data=ptree.fert[ptree.fert$pc1 > 0, ], inherit.aes=FALSE,
+            aes(x=streeBA, y=Estimate), size=1, color="gray60") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+# CON FOR HIGH FERTILITY
+png("con_at_HIGH_fert_nysy.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(pcon.fert, aes(x=scon, y=Estimate)) +
+  scale_y_continuous(limits=c(0, 42), name = "") +
+  scale_x_continuous(limits=c(-0.01, 0.46), breaks =  c(0, 0.15, 0.3, 0.45), name = "") +
+  geom_ribbon(data=pcon.fert[pcon.fert$pc1 > 0, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=scon),
+              alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
+  geom_line(data=pcon.fert[pcon.fert$pc1 > 0, ], inherit.aes=FALSE,
+            aes(x=scon, y=Estimate), size=1, color="gray10") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+
+# TOTAL BA FOR LOW FERTILITY
+png("total_at_LOW_fert_nysy.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(ptree.fert, aes(x=streeBA, y=Estimate)) +
+  scale_x_continuous(name = "", breaks = seq(0, 35000, 10000)) +
+  scale_y_continuous(limits=c(0, 42), name="") +
+  geom_ribbon(data=ptree.fert[ptree.fert$pc1 < 0, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=streeBA),
+              alpha=0.2, linetype=3, size=0.75, color="gray60", fill = "gray70") +
+  geom_line(data=ptree.fert[ptree.fert$pc1 < 0, ], inherit.aes=FALSE,
+            aes(x=streeBA, y=Estimate), size=1, color="gray60") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+# CON FOR LOW FERTILITY
+png("con_at_LOW_fert_nysy.png", width = 1.5, height = 1, units = "in", res = 600)
+ggplot(pcon.fert, aes(x=scon, y=Estimate)) +
+  scale_x_continuous(limits=c(-0.01, 0.46), breaks =  c(0, 0.15, 0.3, 0.45), name = "") +
+  scale_y_continuous(limits=c(0, 42), name="") +
+  geom_ribbon(data=pcon.fert[pcon.fert$pc1 < 0, ], inherit.aes=FALSE,
+              aes(ymin=Q2.5, ymax=Q97.5, x=scon),
+              alpha=0, linetype=5, size=0.75, color="gray10", fill="gray70") +
+  geom_line(data=pcon.fert[pcon.fert$pc1 < 0, ], inherit.aes=FALSE,
+            aes(x=scon, y=Estimate), size=1, color="gray10") +
+  scale_fill_manual(values="gray5") +
+  theme_classic() +
+  theme(
+    axis.text=element_text(size=8),
+    axis.title=element_blank(),
+    plot.margin = unit(rep(1, 4), "mm"))
+dev.off()
+
+
+
 
 
 
