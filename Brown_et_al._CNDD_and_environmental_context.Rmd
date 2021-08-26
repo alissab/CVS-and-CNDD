@@ -1,0 +1,250 @@
+---
+title: "Brown et al., CNDD and the environmental context"
+author: "Alissa Brown"
+date: "April 11, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include = FALSE}
+x <- c("brms", "dplyr", "vegan", "bayesplot", "knitr")
+lapply(x, require, character.only = TRUE)
+load("plots_mod3.RData")  # load models and data
+```
+
+# Vegetation communities
+
+A list of the vegetation community types retained for analyses. Classification is based on the National Vegetation Classification system <http://usnvc.org/>.
+
+```{r}
+tab <- data.frame(table(dat$commPrimaryScientific))
+names(tab) <- c("Veg_type", "Frequency")
+kable(tab)
+```
+
+# Species names and codes
+
+A table with all species names and their assigned species codes.
+
+```{r}
+codes <- dat %>% select(species_name, species) %>% distinct() %>% arrange(species_name)
+kable(codes)
+```
+
+# Principal Components Analysis (PCA) for soil measurements
+
+PCA results.
+
+```{r, message = FALSE}
+soil_measures <- c('Plot', 'organic', 'sand', 'silt', 'clay', 'ph', 'exchCap', 'baseSat', 
+                   'Ca_ppm', 'Mg_ppm', 'K_ppm', 'Na_ppm', 'B_ppm', 'Fe_ppm', 
+                   'Mn_ppm', 'Cu_ppm', 'Zn_ppm', 'Al_ppm', 'Ca_Mg_ppm', 'density')
+soil_use <- dat %>% select(soil_measures)
+soil_use <- soil_use %>% distinct
+soil_use <- soil_use[complete.cases(soil_use), ]
+soil_use[,-1] <- sapply(soil_use[,-1], as.numeric)
+
+# par(mfrow=c(5, 4))
+# par(mar=rep(0.5, 4))
+# sapply(soil_use[, -1], hist)  # look for outliers
+
+# remove outliers
+out_organic <- boxplot(soil_use$organic, plot=FALSE)$out
+soil_use[,"organic"] <- ifelse(
+  soil_use$organic %in% out_organic, NA, soil_use$organic)
+
+out_exchCap <- boxplot(soil_use$exchCap, plot=FALSE)$out
+soil_use[,"exchCap"] <- ifelse(
+  soil_use$exchCap %in% out_exchCap, NA, soil_use$exchCap)
+
+out_baseSat <- boxplot(soil_use$baseSat, plot=FALSE)$out
+soil_use[,"baseSat"] <- ifelse(
+  soil_use$baseSat %in% out_baseSat, NA, soil_use$baseSat)
+
+out_Ca_ppm <- boxplot(soil_use$Ca_ppm, plot=FALSE)$out
+soil_use[,"Ca_ppm"] <- ifelse(
+  soil_use$Ca_ppm %in% out_Ca_ppm, NA, soil_use$Ca_ppm)
+
+out_Mg_ppm <- boxplot(soil_use$Mg_ppm, plot=FALSE)$out
+soil_use[,"Mg_ppm"] <- ifelse(
+  soil_use$Mg_ppm %in% out_Mg_ppm, NA, soil_use$Mg_ppm)
+
+out_Na_ppm <- boxplot(soil_use$Na_ppm, plot=FALSE)$out
+soil_use[,"Na_ppm"] <- ifelse(
+  soil_use$Na_ppm %in% out_Na_ppm, NA, soil_use$Na_ppm)
+
+out_B_ppm <- boxplot(soil_use$B_ppm, plot=FALSE)$out
+soil_use[,"B_ppm"] <- ifelse(
+  soil_use$B_ppm %in% out_B_ppm, NA, soil_use$B_ppm)
+
+out_Mn_ppm <- boxplot(soil_use$Mn_ppm, plot=FALSE)$out
+soil_use[,"Mn_ppm"] <- ifelse(
+  soil_use$Mn_ppm %in% out_Mn_ppm, NA, soil_use$Mn_ppm)
+
+out_Cu_ppm <- boxplot(soil_use$Cu_ppm, plot=FALSE)$out
+soil_use[,"Cu_ppm"] <- ifelse(
+  soil_use$Cu_ppm %in% out_Cu_ppm, NA, soil_use$Cu_ppm)
+
+out_Zn_ppm <- boxplot(soil_use$Zn_ppm, plot=FALSE)$out
+soil_use[,"Zn_ppm"] <- ifelse(
+  soil_use$Zn_ppm %in% out_Zn_ppm, NA, soil_use$Zn_ppm)
+
+out_Ca_Mg_ppm <- boxplot(soil_use$Ca_Mg_ppm, plot=FALSE)$out
+soil_use[,"Ca_Mg_ppm"] <- ifelse(
+  soil_use$Ca_Mg_ppm %in% out_Ca_Mg_ppm, NA, soil_use$Ca_Mg_ppm)
+
+soil_use <- soil_use[complete.cases(soil_use), ]
+
+# check data shape - needs to be normal
+# dev.off()
+# par(mfrow=c(5, 4))
+# par(mar=rep(0.5, 4))
+# sapply(soil_use[,-1], hist)
+
+# log transform skewed measures
+to_log <- c('organic', 'clay', 'exchCap', 'baseSat', 'Ca_ppm', 
+            'Mg_ppm', 'K_ppm', 'Na_ppm', 'Mn_ppm', 'Cu_ppm', 
+            'Zn_ppm', 'density')
+foo <- which(names(soil_use) %in% to_log)
+
+soil_use[,-1] <- soil_use[,-1] + 1
+soil_use[,foo] <- sapply(soil_use[,foo], log)
+
+# dev.off()
+# par(mfrow=c(5, 4))
+# par(mar=rep(0.5, 4))
+# sapply(soil_use[,-1], hist)
+
+# scale all soil measures
+soil_use[,-1] <- as.data.frame(sapply(soil_use[,-1], scale))
+
+# dev.off()
+# par(mfrow=c(5, 4))
+# par(mar=rep(0.5, 4))
+# sapply(soil_use[,-1], hist) # looks good
+
+# perform PCA
+soil_use <- soil_use %>% ungroup()
+soil_pca <- soil_use %>% select(-Plot)
+pca <- rda(soil_pca)
+par(mfrow=c(1,1), mar=rep(4,4))
+biplot(pca, display = c("sites", "species"), type = c("text", "points"))
+
+pca_summ <- summary(pca)
+pca_summ$cont$importance
+pca_summ$species
+```
+
+# Bayesian priors
+
+```{r}
+mod3$prior[, 1:4]
+```
+
+# Bayesian parameter estimates
+
+## Fixed effects
+```{r}
+fixef(mod3)
+```
+
+## Random effects
+### Species intercepts
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 1]
+```
+
+### Species responses to total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 2]
+```
+
+### Species responses to proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 3]
+```
+
+### Species responses to the interaction between elevation and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 4]
+```
+
+### Species responses to the interaction between elevation and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 5]
+```
+
+### Species responses to the interaction between soil fertility and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 6]
+```
+
+### Species responses to the interaction between soil fertility and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 7]
+```
+
+### Species responses to the interaction between soil texture and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 8]
+```
+
+### Species responses to the interaction between soil texture and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 9]
+```
+
+### Species responses to the interaction between slope steepness and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 10]
+```
+
+### Species responses to the interaction between slope steepness and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 11]
+```
+
+### Species responses to the interaction between East-West direction and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 12]
+```
+
+### Species responses to the interaction between East-West direction and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 13]
+```
+
+### Species responses to the interaction between North-South direction and total basal area
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 14]
+```
+
+### Species responses to the interaction between North-South direction and proportion conspecific
+```{r}
+ran <- ranef(mod3)
+ran$species[, , 15]
+```
+
+# Posterior distributions and trace plots for model parameters
+
+```{r}
+plot(mod3, N = 3)
+```
+
