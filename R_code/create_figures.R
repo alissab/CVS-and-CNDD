@@ -11,8 +11,9 @@ require(sjstats)
 require(gridExtra)
 require(bayesplot)
 
-
-dat <- read.csv("chap3_hardw_plots_29May.csv", stringsAsFactors = FALSE, na.strings=c("","NA"))
+setwd('C:/Users/abrow/Documents/CVS-and-CNDD')
+dat <- readRDS('data/hardwood_plot_data.RDS')
+mod <- readRDS('output/chap3_mod3_Aug2021.RDS')
 
 # MAPPING
 # convert UTMs to lat/longs
@@ -228,345 +229,238 @@ ran$species[,,1]  # extracts random intercept values for each species
 ran$species[,,2]  # plot_het_tree_BA
 ran$species[,,3]  # plot_cons_tree_BA
 
-# ran$species[species names, column estimates, random slope]
-ran$species[1:3, , ]  # extracts all random slopes for each species[1:3]
+# print the order of the model coefficients
+mod$ranef$coef
+# [1] "Intercept"              "plot_tree_BA"           "propCon"               
+# [4] "plot_tree_BA:Elevation" "propCon:Elevation"      "plot_tree_BA:fert"     
+# [7] "propCon:fert"           "plot_tree_BA:text"      "propCon:text"          
+# [10] "plot_tree_BA:steep"     "propCon:steep"          "plot_tree_BA:NE"       
+# [13] "propCon:NE" 
 
 # require(sjstats)
 cons_betas <- as.data.frame(ran$species[,, 3])  # random slopes of conspBA for all species
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 
 # heterospecific random slope by species
 het_betas <- as.data.frame(ran$species[,, 2])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
 
 # combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
+betas <- rbind(cons_betas, het_betas)
 
-# conspecific random slope for each species
-png("param_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(cons_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-3, 4)) +
+# conspecific/heterospecific random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  scale_y_continuous(name ="", limits = c(-3.5, 3.5), breaks = seq(-3.5, 3.5, by = 1)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
     plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
-png("param_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-3, 4)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue", alpha = 0.5) +
-  theme_classic() + 
-  theme(
-    plot.title = element_text(hjust = 0.5, color = "blue"),
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
 # ELEVATION is random effect #4, 5 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 5])
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 het_betas <- as.data.frame(ran$species[,, 4])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
+betas <- rbind(cons_betas, het_betas)
 
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
-# conspecific random slope for each species
-png("param_ELEV_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1.1, 1)) +
+# con/het random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  scale_y_continuous(name ="", limits = c(-1.5, 1.5), breaks = seq(-1.5, 1.5, by = 0.5)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
-
-# heterospecific random slope by species
-png("param_ELEV_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1, 1)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_ELEV_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# PC1 is random effect #6, 7 (het, con, respectively)
+# FERTILITY is random effect #6, 7 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 7])
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 het_betas <- as.data.frame(ran$species[,, 6])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
+betas <- rbind(cons_betas, het_betas)
 
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
-# conspecific random slope for each species
-png("param_PC1_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1.5, 1.1)) +
+# con/het random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  scale_y_continuous(name ="", limits = c(-1.5, 1.5), breaks = seq(-1.5, 1.5, by = 0.5)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
-
-# heterospecific random slope by species
-png("param_PC1_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-1.5, 1.1)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_FERT_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# PC2 is random effect #8, 9 (het, con, respectively)
+# TEXTURE is random effect #8, 9 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 9])
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 het_betas <- as.data.frame(ran$species[,, 8])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
+betas <- rbind(cons_betas, het_betas)
 
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
-# conspecific random slope for each species
-png("param_PC2_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.5, 0.6)) +
+# con/het random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  scale_y_continuous(name ="", limits = c(-0.6, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_TEXT_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
-
-# heterospecific random slope by species
-png("param_PC2_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.5, 0.6)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# TOP1 is random effect #10, 11 (het, con, respectively)
+# STEEPNESS is random effect #10, 11 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 11])
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 het_betas <- as.data.frame(ran$species[,, 10])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
+betas <- rbind(cons_betas, het_betas)
 
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
-# conspecific random slope for each species
-png("param_TOP1_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.6, 0.7)) +
+# con/het random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  # scale_y_continuous(name ="", limits = c(-0.6, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_STEEP_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
-
-# heterospecific random slope by species
-png("param_TOP1_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.6, 0.7)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
 
 
 
 # CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# TOP2 is random effect 12, 13 (het, con, respectively)
+# NORTHEASTness is random effect 12, 13 (het, con, respectively)
 cons_betas <- as.data.frame(ran$species[,, 13])
 cons_betas$term <- row.names(cons_betas)
+cons_betas$type <- 'Conspecific'
 het_betas <- as.data.frame(ran$species[,, 12])
 het_betas$term <- row.names(het_betas)
+het_betas$type <- 'Heterospecific'
+betas <- rbind(cons_betas, het_betas)
 
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
 
-# conspecific random slope for each species
-png("param_TOP2_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.35, 0.3)) +
+# con/het random slope for each species
+ggplot(betas, aes(x = reorder(term, Estimate), y = Estimate, color = factor(type))) +
+  # scale_y_continuous(name ="", limits = c(-0.6, 0.6)) +
   scale_x_discrete(name ="") +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
+  geom_vline(xintercept = seq(5.5, 45.5, by = 5), color = "gray80", size = 0.5) +
   coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
+  geom_point(size = 2, shape = 1, position = position_dodge(width = 0.5)) + 
+  geom_errorbar(aes(ymax = Q97.5, ymin = Q2.5), width = 0, size = 0.5,
+                position = position_dodge(width = 0.5)) +
+  theme_bw() +
   theme(
+    plot.title = element_text(hjust = 0.5, color = "red"),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
-
-# heterospecific random slope by species
-png("param_TOP2_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.35, 0.3)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
-
-
-# CON VS. HET INTERACTIONS WITH ENVIRONMENT BY SPECIES
-# TOP3 is random effect 14, 15 (het, con, respectively)
-cons_betas <- as.data.frame(ran$species[,, 15])
-cons_betas$term <- row.names(cons_betas)
-het_betas <- as.data.frame(ran$species[,, 14])
-het_betas$term <- row.names(het_betas)
-
-# combine conspecific with heteros estimates into one df
-names(cons_betas) <- c("conEstimate", "conEst.Error", "conQ2.5", "conQ97.5", "term")
-names(het_betas) <- c("hetEstimate", "hetEst.Error", "hetQ2.5", "hetQ97.5", "term")
-con_het_betas <- full_join(cons_betas, het_betas, by="term")
-
-# conspecific random slope for each species
-png("param_TOP3_con_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = conEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.38, 0.29)) +
-  scale_x_discrete(name ="") +
-  geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "red") + 
-  geom_errorbar(aes(ymax = conQ97.5, ymin = conQ2.5), width = 0, size = 0.5, color = "red") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
-
-# heterospecific random slope by species
-png("param_TOP3_het_sps.png", width = 2.5, height = 7.5, units = "in", res = 300)
-ggplot(con_het_betas, aes(x = reorder(term, conEstimate), y = hetEstimate)) +
-  scale_y_continuous(name ="", limits = c(-0.38, 0.29)) +
-  scale_x_discrete(name ="") +
-  # geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
-  coord_flip() +
-  geom_point(size = 2, shape = 1, color = "blue") + 
-  geom_errorbar(aes(ymax = hetQ97.5, ymin = hetQ2.5), width = 0, size = 0.5, color = "blue") +
-  theme_classic() + 
-  theme(
-    axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10))
-dev.off()
-
+    axis.text.y = element_text(size = 10),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.9,0.1))
+ggsave('figures/param_NE_con_vs_het_sps.png', width = 7.5, height = 10, units = 'in')
 
 
 
 
 
 # PLOTTING FIXED EFFECTS
-
 # plot posterior distributions
 require(bayesplot)
 post <- mod3$fit@sim$samples[[1]]
@@ -838,6 +732,8 @@ ggMarginal(p.h, type = "histogram")
 
 
 
+### 8/26/2021 I HAVEN'T YET CHECKED OVER THIS CODE CHUNK ###
+###########################################################################
 
 # REPORTING QUANTITATIVE RESULTS, THEN GRAPHING THE SUMMARY OF THOSE
 require(tidyr)
@@ -851,7 +747,7 @@ post <- mod$fit@sim$samples[[1]]
 
 
 # use this code if you're using one data set (no missing data filling in)
-post <- as.array(mod3)  # array: [# iterations, # chains, # parameters]
+post <- as.array(mod)  # array: [# iterations, # chains, # parameters]
 
 # if you did above, you need to first
 # gather all iterations across all chains together into one column for each 
@@ -878,16 +774,16 @@ con <- c(t(con))
 pnorm(q = q, mean = mean(con), sd = sd(con))
 # there is a 98% chance that propCon is >= tot
 
-
+###########################################################################
 
 
 
 
 
 # AUTOMATE CON VS. HET COMPARISON BY COVARIATE BY SPECIES
-post <- as.array(mod3)
+post <- as.array(mod)
 
-# create list of iterations x chains for each parameter (1857 params)
+# create list of iterations x chains for each parameter (1571 params)
 all_post <- list()
 for(i in 1:length(post[1, 1, ])){
   all_post[[i]] <- post[, , i]
@@ -911,8 +807,8 @@ all_post_red <- all_post2[substr(params, 1, 2) == "b_" |
 all_post_red2 <- all_post_red[grepl("propCon", names(all_post_red)) | 
                                       grepl("plot_tree_BA", names(all_post_red))]
 
-# remove overall con/het to make next steps easier
-all_post_red2 <- all_post_red2[3:562]
+# remove overall con/het effect to make next steps easier
+all_post_red2 <- all_post_red2[3:length(all_post_red2)]
 
 # order params alphabetically
 all_post_red2 <- all_post_red2[order(names(all_post_red2))]
@@ -920,21 +816,18 @@ all_post_red2 <- all_post_red2[order(names(all_post_red2))]
 # split list up into series of lists grouped by species
 all_post_red3 <- split(all_post_red2, substr(names(all_post_red2), 11, 14))
 
-all_post_red4 <- all_post_red3
-
 
 # ELEVATION
 post_elev <- list()
-for(i in 1:length(all_post_red4)){
-  post_elev[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][8])), 
-                              data.frame(het = unlist(all_post_red4[[i]][1])))
+for(i in 1:length(all_post_red3)){
+  post_elev[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][7])), 
+                              data.frame(het = unlist(all_post_red3[[i]][1])))
 }
-
-species_names <- names(all_post_red4)
+species_names <- names(all_post_red3)
 names(post_elev) <- species_names
 
 elev_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_elev[[i]][["con"]]) < mean(post_elev[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_elev[[i]][["het"]]), sd = sd(post_elev[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_elev[[i]][["con"]]), sd = sd(post_elev[[i]][["con"]]))
@@ -954,15 +847,14 @@ elev_prob$species <- species_names
 
 # SLOPE STEEPNESS
 post_ste <- list()
-for(i in 1:length(all_post_red4)){
-  post_ste[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][11])), 
-                      data.frame(het = unlist(all_post_red4[[i]][4])))
+for(i in 1:length(all_post_red3)){
+  post_ste[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][10])), 
+                      data.frame(het = unlist(all_post_red3[[i]][4])))
 }
-
 names(post_ste) <- species_names
 
 ste_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_ste[[i]][["con"]]) < mean(post_ste[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_ste[[i]][["het"]]), sd = sd(post_ste[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_ste[[i]][["con"]]), sd = sd(post_ste[[i]][["con"]]))
@@ -980,17 +872,16 @@ ste_prob$species <- species_names
 
 
 
-# EAST-WEST DIRECTION
+# NORTHEAST DIRECTION
 post_ew <- list()
-for(i in 1:length(all_post_red4)){
-  post_ew[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][12])), 
-                      data.frame(het = unlist(all_post_red4[[i]][5])))
+for(i in 1:length(all_post_red3)){
+  post_ew[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][9])), 
+                      data.frame(het = unlist(all_post_red3[[i]][3])))
 }
-
 names(post_ew) <- species_names
 
 ew_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_ew[[i]][["con"]]) < mean(post_ew[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_ew[[i]][["het"]]), sd = sd(post_ew[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_ew[[i]][["con"]]), sd = sd(post_ew[[i]][["con"]]))
@@ -1008,45 +899,16 @@ ew_prob$species <- species_names
 
 
 
-# NORTH-SOUTH DIRECTION
-post_ns <- list()
-for(i in 1:length(all_post_red4)){
-  post_ns[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][13])), 
-                      data.frame(het = unlist(all_post_red4[[i]][6])))
-}
-
-names(post_ns) <- species_names
-
-ns_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
-  if(mean(post_ns[[i]][["con"]]) < mean(post_ns[[i]][["het"]])){
-    q <- qnorm(p = 0.025, mean = mean(post_ns[[i]][["het"]]), sd = sd(post_ns[[i]][["het"]]))
-    p <- pnorm(q = q, mean = mean(post_ns[[i]][["con"]]), sd = sd(post_ns[[i]][["con"]]))
-    ns_prob[i, "con_lt_het"] <- 1
-    ns_prob[i, "prob"] <- p
-  }
-  if(mean(post_ns[[i]][["con"]]) > mean(post_ns[[i]][["het"]])){
-    q <- qnorm(p = 0.025, mean = mean(post_ns[[i]][["con"]]), sd = sd(post_ns[[i]][["con"]]))
-    p <- pnorm(q = q, mean = mean(post_ns[[i]][["het"]]), sd = sd(post_ns[[i]][["het"]]))
-    ns_prob[i, "con_lt_het"] <- 0
-    ns_prob[i, "prob"] <- p
-  }
-}
-ns_prob$species <- species_names
-
-
-
 # FERTILITY
 post_fert <- list()
-for(i in 1:length(all_post_red4)){
-  post_fert[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][9])), 
-                      data.frame(het = unlist(all_post_red4[[i]][2])))
+for(i in 1:length(all_post_red3)){
+  post_fert[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][8])), 
+                      data.frame(het = unlist(all_post_red3[[i]][2])))
 }
-
 names(post_fert) <- species_names
 
 fert_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_fert[[i]][["con"]]) < mean(post_fert[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_fert[[i]][["het"]]), sd = sd(post_fert[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_fert[[i]][["con"]]), sd = sd(post_fert[[i]][["con"]]))
@@ -1066,15 +928,14 @@ fert_prob$species <- species_names
 
 # TEXTURE
 post_text <- list()
-for(i in 1:length(all_post_red4)){
-  post_text[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][10])), 
-                      data.frame(het = unlist(all_post_red4[[i]][3])))
+for(i in 1:length(all_post_red3)){
+  post_text[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][11])), 
+                      data.frame(het = unlist(all_post_red3[[i]][5])))
 }
-
 names(post_text) <- species_names
 
 text_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_text[[i]][["con"]]) < mean(post_text[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_text[[i]][["het"]]), sd = sd(post_text[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_text[[i]][["con"]]), sd = sd(post_text[[i]][["con"]]))
@@ -1095,15 +956,14 @@ text_prob$species <- species_names
 
 # MAIN CON VS. HET EFFECT
 post_main <- list()
-for(i in 1:length(all_post_red4)){
-  post_main[[i]] <- c(data.frame(con = unlist(all_post_red4[[i]][14])), 
-                      data.frame(het = unlist(all_post_red4[[i]][7])))
+for(i in 1:length(all_post_red3)){
+  post_main[[i]] <- c(data.frame(con = unlist(all_post_red3[[i]][12])), 
+                      data.frame(het = unlist(all_post_red3[[i]][6])))
 }
-
 names(post_main) <- species_names
 
 main_prob <- data.frame(species = character(), con_lt_het = integer(), prob = numeric())
-for(i in 1:40){
+for(i in 1:length(species_names)){
   if(mean(post_main[[i]][["con"]]) < mean(post_main[[i]][["het"]])){
     q <- qnorm(p = 0.025, mean = mean(post_main[[i]][["het"]]), sd = sd(post_main[[i]][["het"]]))
     p <- pnorm(q = q, mean = mean(post_main[[i]][["con"]]), sd = sd(post_main[[i]][["con"]]))
@@ -1120,7 +980,7 @@ for(i in 1:40){
 main_prob$species <- species_names
 
 
-results_list <- list(elev_prob, ste_prob, ew_prob, ns_prob, fert_prob, text_prob, main_prob)
+results_list <- list(elev_prob, ste_prob, ew_prob, fert_prob, text_prob, main_prob)
 
 
 for(i in 1:length(results_list)){
@@ -1142,38 +1002,36 @@ for(i in 1:length(results_list)){
   )
 }
 
-names(results_list) <- c("elev", "ste", "ew", "ns", "fert", "text", "main")
+names(results_list) <- c("elev", "ste", "ne", "fert", "text", "main")
 
-results_list[["elev"]][, "term"] <- "elev"
-results_list[["ste"]][, "term"] <- "ste"
-results_list[["ew"]][, "term"] <- "ew"
-results_list[["ns"]][, "term"] <- "ns"
-results_list[["fert"]][, "term"] <- "fert"
-results_list[["text"]][, "term"] <- "text"
+results_list[["elev"]][, "term"] <- "elevation"
+results_list[["ste"]][, "term"] <- "steepness"
+results_list[["ne"]][, "term"] <- "northeast"
+results_list[["fert"]][, "term"] <- "fertility"
+results_list[["text"]][, "term"] <- "texture"
 results_list[["main"]][, "term"] <- "main"
 
 # bind each param together into one df (row bind)
 summary_all <- rbind(data.frame(results_list[["elev"]]), data.frame(results_list[["ste"]]), data.frame(results_list[["ew"]]),
-                     data.frame(results_list[["ns"]]), data.frame(results_list[["fert"]]), data.frame(results_list[["text"]]), 
+                     data.frame(results_list[["ne"]]), data.frame(results_list[["fert"]]), data.frame(results_list[["text"]]), 
                      data.frame(results_list[["main"]]))
 
 # provide dummy x-variable, one for each env variable
 summary_all$x <- with(summary_all, ifelse(
-  term == "main", 1, ifelse(term == "elev", 2, ifelse(term == "ste", 3, ifelse(
-    term == "ew", 4, ifelse(term == "ns", 5, ifelse(term == "fert", 6, ifelse(
-      term == "text", 7, "oops")
+  term == "main", 1, ifelse(term == "elevation", 2, ifelse(term == "steepness", 3, ifelse(
+    term == "northeast", 4, ifelse(term == "fertility", 5, ifelse(
+      term == "texture", 6, "oops")
     )))
   )))
-)
 summary_all$x <- as.numeric(summary_all$x)
 
-# write.csv(summary_all, "chap3_results_summary_for_graphing.csv", row.names = FALSE)
-# summary_all <- read.csv("chap3_results_summary_for_graphing.csv", stringsAsFactors = FALSE)
+saveRDS(summary_all, "output/chap3_results_summary_for_graphing.RDS")
+# summary_all <- readRDS("output/chap3_results_summary_for_graphing.RDS")
 
 # order species by magnitude of CNDD, so order by term "main"
 sp_order <- summary_all[summary_all$term == "main",]
 sp_order <- sp_order %>% arrange(desc(con_lt_het), desc(prob))
-sp_order$order <- 1:40
+sp_order$order <- 1:nrow(sp_order)
 summary_all <- left_join(summary_all, sp_order[,c("species", "order")], by = "species")
 
 sp_levels <- data.frame(species = summary_all$species, order = summary_all$order)
@@ -1182,22 +1040,29 @@ sp_levels <- sp_levels %>% arrange(desc(order))
 sp_levels <- sp_levels$species
 sp_levels <- as.character(sp_levels)
 
-png("species_probs_summary.png", width = 6, height = 8, units = "in", res = 600)
-ggplot(summary_all, aes(x = x, y = species, color = color)) + 
-  geom_hline(mapping = NULL, yintercept = seq(1, 40, 2), colour = 'grey80') +
+summary_all$color <- factor(summary_all$color, levels = c('red', 'pink', 'blue', 'lightblue'), 
+                            labels = c('Strong CNDD    ', 'Weak CNDD    ', 'Strong positive CDD', 'Weak positive CDD'))
+
+ggplot(subset(summary_all, !is.na(color)), aes(x = x, y = species, color = color)) + 
+  geom_hline(mapping = NULL, yintercept = seq(1, 50, 2), colour = 'grey80') +
+  geom_vline(xintercept = seq(1, 6), colour = 'grey80') +
   geom_point(size = 3.5) +
-  scale_x_continuous(name = "", breaks = 1:7,
+  scale_x_continuous(name = "", breaks = 1:6,
                      labels = c("Main effect", "Elevation", "Slope   \nsteepness",
-                                         "East-West\nfacing  ", "North-South\nfacing   ", "Soil fertility", "Soil texture")) +
+                                         "Northeast\nfacing  ", "Soil fertility", "Soil texture")) +
   scale_y_discrete(name = "", limits = sp_levels) +
-  scale_color_manual(values = c("blue", "lightblue", "pink", "red", "white")) +
+  scale_color_manual(values = c('red', 'pink', 'blue', 'lightblue')) +
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 10),
         axis.text.x = element_text(size = 12, angle = 60, hjust = 1),
         panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())
-dev.off()
-
+        panel.grid.major = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.position = 'top',
+        legend.direction = 'vertical') +
+  guides(color = guide_legend(nrow = 2, byrow = FALSE))
+ggsave('figures/species_probs_summary.png', width = 4, height = 9, units = 'in')
 
 
 
