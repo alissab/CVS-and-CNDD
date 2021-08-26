@@ -1,7 +1,5 @@
 
-# setwd('C:/Users/abrow/Documents/CVS-and-CNDD')
-# setwd("/pine/scr/a/l/alissab/new_chap3")
-setwd('C:/Users/abrow/Documents/chap3')
+setwd('C:/Users/abrow/Documents/CVS-and_CNDD')
 # smaller mods just need 20g; larger mods need more - 50g
 
 require(dplyr)
@@ -9,7 +7,7 @@ require(brms)
 # require(future)
 # require(mice)
 
-dat <- readRDS("chap3_hardw_plots_Jan2021.RDS")
+dat <- readRDS("hardwood_plot_data.RDS")
 dat <- dat %>% filter(species_name != "other")
 
 # rename columns
