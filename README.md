@@ -1,10 +1,14 @@
 # Do large-scale environmental gradients affect inter- and intraspecific patterns of conspecific negative density dependence in temperate forests?
-This repo contains R code used to analyze [Carolina Vegetation Survey](http://cvs.bio.unc.edu/) data for A. Brown's PhD dissertation. This project is still in prep, and R code has not yet been finalized. 
+This repo contains data and R code used to analyze [Carolina Vegetation Survey](http://cvs.bio.unc.edu/) data for A. Brown's PhD dissertation. This project is still in prep, and R code has not yet been finalized. 
 
-### R code
-- **data_mgmt_Jan2019** This code combines and restructures Carolina Vegetation Survey datasets to prepare for modeling. CVS datasets used include: plot data; stem data within plots; soil data within plots; Virginia CVS plot information (not available within main CVS dataset). It also uses National Vegetation Classification assignments to determine the vegetation type found within plots.
-- **chap3_plots_\*** These code files prepare datasets and run Bayesian models. 
-- **plotting** This code creates plots for use in the manuscript (in prep). 
+### R_code
+- **data_preparation.R** This code combines and restructures Carolina Vegetation Survey datasets to prepare for modeling. CVS datasets used include: plot data; stem data within plots; soil data within plots; Virginia CVS plot information (not available within main CVS dataset). It also uses National Vegetation Classification assignments to determine the vegetation type found within plots.
+- **model_runs.R** This code prepare datasets and run Bayesian models. 
+- **create_figures.R** This code creates plots for use in the manuscript (in prep). 
+- **supplemental_doc.Rmd** Markdown file for creating supplemental materials for manuscript. Includes list of vegetation communities included in the analyses; all tree species names and their codes; results of the Principal Components Analysis; Bayesian priors used in the final (best performing) model; results for the fixed and random effects of the final model; and trace plots for all parameter estimates.
+
+### Data
+- Contains dataframe (output from running data_preparation.R code)
 
 ### Background
 Conspecific negative density dependence (CNDD) is thought to be a major influence on   tree diversity in temperate forests. Under CNDD, intraspecific competition and pathogen accumulation (among other mechanisms) lead to limited recruitment of seedlings in close proximity to conspecific adults. While it is increasingly apparent that this is an important recruitment pattern in temperate forests, it is unclear why we see differential susceptibility to conspecifics, both between species and within species. 
